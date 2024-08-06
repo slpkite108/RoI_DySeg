@@ -1,0 +1,10 @@
+{
+    "root": "/data/jayeon/Dataset/amos22/",
+    "scale":"origin",
+    "imageFolder":"imagesTr",
+    "labelFolder":"labelsTr",
+    "bbox":"bboxTr.json",
+    "info":{
+        "name":"amos22"
+    }
+}
