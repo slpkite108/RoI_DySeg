@@ -1,18 +1,28 @@
 import json
+import utils
+
+from datetime import datetime
 from train import train_model
+from run import run
+
 # from validate import validate_model  # 검증 함수가 구현되어 있다고 가정
 
 def main(config_path='config/config.json'):
-    # 설정 파일 로드
-    with open(config_path) as config_file:
-        config = json.load(config_file)
+    
+    configs = utils.Prepare(config_path)
+    
+    accelerator = utils.getAccelerator(configs.work_dir,configs.checkpoint)
+    
+    logger = utils.getLogger(accelerator, configs)
+    
+    #interval 0.1 
+    start_time = datetime.now()
+    run(accelerator, logger, configs)
+    end_time = datetime.now()
 
-    # 모델 학습
-    train_model(config_path)
-
-    # 모델 검증 (선택적)
-    # 검증 결과를 기반으로 최적의 모델 선택 및 저장 로직 구현
-    # validate_model(config_path)
-
+    
+    
+    exit(0)
+    
 if __name__ == '__main__':
     main()
