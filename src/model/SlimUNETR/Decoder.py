@@ -1,7 +1,6 @@
 import torch.nn as nn
 
-from src.SlimUNETR.Slim_UNETR_Block import Block
-
+from src.model.SlimUNETR.Slim_UNETR_Block import Block
 
 class TransposedConvLayer(nn.Module):
     def __init__(self, dim_in, dim_out, r):
@@ -27,9 +26,7 @@ class Decoder(nn.Module):
         dropout=0.3,
     ):
         super(Decoder, self).__init__()
-        self.SegHead = TransposedConvLayer(
-            dim_in=channels[0], dim_out=out_channels, r=4
-        )
+        self.SegHead = TransposedConvLayer(dim_in=channels[0], dim_out=out_channels, r=4)
         self.TSconv3 = TransposedConvLayer(dim_in=channels[1], dim_out=channels[0], r=2)
         self.TSconv2 = TransposedConvLayer(dim_in=channels[2], dim_out=channels[1], r=2)
         self.TSconv1 = TransposedConvLayer(dim_in=embed_dim, dim_out=channels[2], r=2)

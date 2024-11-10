@@ -1,0 +1,6 @@
+  dice_metric:
+    smooth: 1e-6
+  iou_metric:
+    smooth: 1e-6
+  hd95_metric:
+    percentile: 95

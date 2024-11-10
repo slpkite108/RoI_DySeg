@@ -1,0 +1,6 @@
+train:
+  test: 1
+validation:
+  test: 1
+generation:
+  test: 1

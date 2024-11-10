@@ -1,0 +1,4 @@
+
+epoch: best
+weight_path: train
+direct_path: null

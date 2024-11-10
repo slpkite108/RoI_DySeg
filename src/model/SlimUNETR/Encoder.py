@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-from src.SlimUNETR.Slim_UNETR_Block import Block
+from src.model.SlimUNETR.Slim_UNETR_Block import Block
 
 
 class DepthwiseConvLayer(nn.Module):

@@ -1,10 +1,12 @@
 import torch
 import torch.nn as nn
 
-from src.SlimUNETR.Decoder import Decoder
-from src.SlimUNETR.Encoder import Encoder
+from src.model.SlimUNETR.Decoder import Decoder
+from src.model.SlimUNETR.Encoder import Encoder
 
+from src.model.registry import register_model
 
+@register_model('SlimUNETR')
 class SlimUNETR(nn.Module):
     def __init__(
         self,
@@ -62,6 +64,7 @@ class SlimUNETR(nn.Module):
         embeding, hidden_states_out, (B, C, W, H, Z) = self.Encoder(x)
         x = self.Decoder(embeding, hidden_states_out, (B, C, W, H, Z))
         return x
+ 
 
 
 if __name__ == "__main__":

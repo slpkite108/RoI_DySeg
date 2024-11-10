@@ -2,9 +2,9 @@ import logging
 import os
 from accelerate.logging import get_logger
 
-def getLogger(accelerator, configs):
-    logging_dir = accelerator.config.project_dir
-    logger = get_logger('main', log_level="DEBUG")
+def getLogger(acceletor, mode='train'):
+    logging_dir = acceletor.project_dir
+    logger = get_logger(mode, log_level="DEBUG")
     
     sh = logging.StreamHandler()
     sh.setLevel(logging.DEBUG)

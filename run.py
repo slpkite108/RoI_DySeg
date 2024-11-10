@@ -1,29 +1,33 @@
-import utils
-import train
-import inference
-import generation
+import os
+from src import utils
+from train import train
+from inference import inference
+# from generation import generation
 
-def run(accelerator, logger, configs):
-    logs = {}
-        framework_obj = utils.SetUp(configs, accelerator, logger)
-        
-        if configs.train:
-            framework_obj.train()
-        
-        if configs.inference:
-            framework_obj.inference()
-            
-        if configs.generation:
-            framework_obj.generation()
-        
+from datetime import datetime
+
+def run(configs, run_train, run_inference, run_generation):
     
-    logs.update(
-        {
-            "total runtime":end_time-start_time,
-            "nvml max GPU Memory Usage":profiler.get_max_memory_usage(),
-        }
-    )
+    os.environ["CUDA_VISIBLE_DEVICES"] = configs.run.device_num
     
-    utils.loggingLogs(logger, logs)
+    if run_train:
+        train(configs)
+
+    if  run_inference:
+        inference(configs)
+
+    # if  run_generation:
+    #     generation()
+    
     
     return
+
+if __name__ == "__main__":
+    config_path = 'config/Default_SlimUNETR_Amos22_128.yml'
+    configs = utils.Prepare(config_path)
+    
+    run_train = True
+    run_inference = True
+    run_generation = False
+    run(configs, run_train, run_inference, run_generation)
+    

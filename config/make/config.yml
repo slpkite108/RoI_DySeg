@@ -1,0 +1,11 @@
+run:
+  yml_path: default.yml
+
+train:
+  yml_path: default.yml
+
+inference:
+  yml_path: default.yml
+  
+generation:
+  yml_path: default.yml

@@ -1,0 +1,13 @@
+work_dir: /data/jayeon/TrainedData/Paper/
+model: 
+  yml_path: SlimUNETR.yml
+checkpoint: Pretrain_Test
+device_num: [1]
+num_workers: 8
+train_mode: True
+inference_mode : False
+genenration_mode : False
+loader: 
+  yml_path: default.yml
+  dataset: 
+    yml_path: amos22.yml

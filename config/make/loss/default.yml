@@ -1,0 +1,6 @@
+dice_loss:
+  smooth: 1e-6
+focal_loss:
+  alpha: 1
+  gamma: 2
+  reduction: mean
