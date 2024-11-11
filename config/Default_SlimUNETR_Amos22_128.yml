@@ -20,12 +20,9 @@ run:
       name: amos22
       root: /data/jayeon/dataset/Amos22_RAS/
       scale: 128
-    generation:
-      test: 1
-    train:
-      test: 1
-    validation:
-      test: 1
+      label_scale: null
+      bbox_scale: null
+      slice_scale: null
   model:
     args:
       shrink: false #true when 16

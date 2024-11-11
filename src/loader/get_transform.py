@@ -36,9 +36,6 @@ def get_transform(configs, mode):
     
     return transform
 
-
-
-
 class ConvertToMultiChannelClassesd(monai.transforms.MapTransform):
     """
     TC WT ET
@@ -55,22 +52,34 @@ class ConvertToMultiChannelClassesd(monai.transforms.MapTransform):
 
     def __init__(
         self,
-        target_label:list,
+        target_label: list,
         keys: monai.config.KeysCollection,
         allow_missing_keys: bool = False,
+        tolerance: float = 1e-5,  # 추가된 허용 오차
     ):
         super().__init__(keys, allow_missing_keys)
-        self.target_label = target_label
+
+        self.target_label = [float(l) for l in target_label]  # target_label을 float으로 변환
+        self.tolerance = tolerance
 
     def converter(self, img: monai.config.NdarrayOrTensor):
-
-        if self.target_label == None or len(self.target_label) == 0:
-            result = [img == 1]
+        result = []
+        if self.target_label is None or len(self.target_label) == 0:
+            # img와 비교할 때 항상 float 타입 사용
+            result = [torch.isclose(img, torch.tensor(1.0), atol=self.tolerance)] if isinstance(img, torch.Tensor) \
+                     else [np.isclose(img, 1.0, atol=self.tolerance)]
         else:
             try:
-                result = [img == l for l in self.target_label]
+                # target_label이 float으로 변환되었으므로 float과 안전하게 비교 가능
+                if isinstance(img, torch.Tensor):
+                    result = [torch.isclose(img, torch.tensor(l, dtype=img.dtype), atol=self.tolerance) for l in self.target_label]
+                else:
+                    result = [np.isclose(img, l, atol=self.tolerance) for l in self.target_label]
             except Exception as e:
-                print('src.transform.ConvertToMultiChannelClassesd Error : ', e)         
+                print('src.transform.ConvertToMultiChannelClassesd Error : ', e)
+        
+        if not result:
+            result = [img == 1.0] if isinstance(img, torch.Tensor) else [img == 1.0]
         return (
             torch.concat(result, dim=0)
             if isinstance(img, torch.Tensor)
@@ -84,3 +93,29 @@ class ConvertToMultiChannelClassesd(monai.transforms.MapTransform):
         for key in self.key_iterator(d):
             d[key] = self.converter(d[key])
         return d
+
+
+
+class Printd:
+    def __init__(self, keys, datakeys):
+        self.keys = keys
+        self.datakeys = datakeys
+
+    def __call__(self, data):
+        print(self.keys)
+        print(type(data))
+        print(data.keys())
+        for key in self.keys:
+            obj = data[key]
+            print(key," : ",obj)
+            
+        for key in self.datakeys:
+            image = data[key]
+            #print(image.array[:,:, 0:4,1:4, 2:4])
+            # 이미지의 현재 크기를 기반으로 최대 길이 계산
+            print(torch.unique(image))
+            print(image.sum())
+            print(key," : ",image.shape)
+            print(key, " : ", image.device)
+        exit(0)
+        return data

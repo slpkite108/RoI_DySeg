@@ -90,6 +90,10 @@ def train(configs):
             modelParameter.val_step, modelParameter.mean_acc, modelParameter.batch_acc = val_one_epoch(model, val_loader, loss_list, metric_list, post_transform, epoch, modelParameter.val_step, accelerator, logger)
             torch.cuda.empty_cache()
             
+            logger.info(
+                f"Epoch [{epoch + 1}/{max_epoch}] segmentation lr = {scheduler.get_last_lr()} best acc: {modelParameter.best_acc}, mean acc: {modelParameter.mean_acc}, mean class: {modelParameter.batch_acc}, best epoch: {modelParameter.best_epoch+1}\n"
+            )
+            
             if modelParameter.mean_acc > modelParameter.best_acc:
                 accelerator.save_state(
                     output_dir=os.path.join(f'{configs.run.work_dir}',f'{configs.run.checkpoint}','train','model_store','best'),

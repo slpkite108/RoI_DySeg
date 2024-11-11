@@ -66,6 +66,7 @@ def inference(configs):
 #region inference
 
         metric, mean_model_time = test_one_epoch(model, test_loader, loss_list, metric_list, post_transform, accelerator, logger)
+        
     logger.info(f'Results : {metric}')
     logger.info(f"mean Model time: {mean_model_time}")
     logger.info(f'GPU_Memory : {objstr(profiler.get_statistics())}')

@@ -31,7 +31,7 @@ def load_dataset_image(configs, mode='train'):
     assert os.path.exists(root), f"Root directory does not exist: {root}"
     
     images_dir = os.path.join(root, 'imagesTr' if mode == 'train' else 'imagesVa')
-    labels_dir = os.path.join(root, 'labelsTr' if mode == 'train' else 'imagesVa')
+    labels_dir = os.path.join(root, 'labelsTr' if mode == 'train' else 'labelsVa')
     
     image_files = sorted(os.listdir(images_dir))
     label_files = sorted(os.listdir(labels_dir))

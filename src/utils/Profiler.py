@@ -5,9 +5,6 @@ from datetime import datetime
 
 from .Statistics import Statistics
 
-# NVML 초기화
-pynvml.nvmlInit()
-
 def get_gpu_handle(device_num):
     return pynvml.nvmlDeviceGetHandleByIndex(device_num)
 
@@ -25,6 +22,9 @@ class Profiler:
     _handles = []
 
     def __init__(self, device_num, pid, interval=None):
+        if not pynvml.nvmlInit():
+            pynvml.nvmlInit()
+            
         self.device_num = int(device_num)
         self.pid = pid
         self.max_memory_usage = 0
@@ -85,6 +85,7 @@ class Profiler:
     def __enter__(self):
         self.start()
         self.start_time = datetime.now()
+        
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
