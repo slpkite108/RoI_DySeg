@@ -19,6 +19,7 @@ class SlimUNETR(nn.Module):
         heads=(1, 2, 4, 4),
         r=(4, 2, 2, 1),
         dropout=0.3,
+        shrink=False
     ):
         """
         Args:
@@ -49,6 +50,7 @@ class SlimUNETR(nn.Module):
             heads=heads,
             r=r,
             dropout=dropout,
+            shrink=shrink
         )
         self.Decoder = Decoder(
             out_channels=out_channels,
@@ -58,11 +60,17 @@ class SlimUNETR(nn.Module):
             heads=heads,
             r=r,
             dropout=dropout,
+            shrink=shrink
         )
 
     def forward(self, x):
         embeding, hidden_states_out, (B, C, W, H, Z) = self.Encoder(x)
         x = self.Decoder(embeding, hidden_states_out, (B, C, W, H, Z))
+        return x
+    
+    def slow_forward(self, x):
+        embeding, hidden_states_out, (B, C, W, H, Z) = self.Encoder(x).to('cuda')
+        x = self.Decoder(embeding, hidden_states_out, (B, C, W, H, Z)).to('cuda')
         return x
  
 

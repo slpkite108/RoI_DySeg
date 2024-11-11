@@ -27,9 +27,10 @@ class Encoder(nn.Module):
         heads=(1, 2, 4, 8),
         r=(4, 2, 2, 1),
         dropout=0.3,
+        shrink=False
     ):
         super(Encoder, self).__init__()
-        self.DWconv1 = DepthwiseConvLayer(dim_in=in_channels, dim_out=channels[0], r=4)
+        self.DWconv1 = DepthwiseConvLayer(dim_in=in_channels, dim_out=channels[0], r=4 if not shrink else 2)
         self.DWconv2 = DepthwiseConvLayer(dim_in=channels[0], dim_out=channels[1], r=2)
         self.DWconv3 = DepthwiseConvLayer(dim_in=channels[1], dim_out=channels[2], r=2)
         self.DWconv4 = DepthwiseConvLayer(dim_in=channels[2], dim_out=embed_dim, r=2)

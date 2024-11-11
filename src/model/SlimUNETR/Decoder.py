@@ -24,9 +24,10 @@ class Decoder(nn.Module):
         heads=(1, 2, 4, 8),
         r=(4, 2, 2, 1),
         dropout=0.3,
+        shrink = False
     ):
         super(Decoder, self).__init__()
-        self.SegHead = TransposedConvLayer(dim_in=channels[0], dim_out=out_channels, r=4)
+        self.SegHead = TransposedConvLayer(dim_in=channels[0], dim_out=out_channels, r=4 if not shrink else 2)
         self.TSconv3 = TransposedConvLayer(dim_in=channels[1], dim_out=channels[0], r=2)
         self.TSconv2 = TransposedConvLayer(dim_in=channels[2], dim_out=channels[1], r=2)
         self.TSconv1 = TransposedConvLayer(dim_in=embed_dim, dim_out=channels[2], r=2)

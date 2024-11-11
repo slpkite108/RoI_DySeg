@@ -4,9 +4,9 @@ import torch
 from easydict import EasyDict
 from timm.optim import optim_factory
 from objprint import objstr
-from monai import transforms
+from monai import losses, metrics, transforms
 
-from src import utils, losses, metrics, loader
+from src import utils, loader
 from src.one_epochs import test_one_epoch
 from src.model import getModel
 from src.optimizer import LinearWarmupCosineAnnealingLR
@@ -65,9 +65,8 @@ def inference(configs):
     
 #region inference
 
-        metrics, mean_model_time = test_one_epoch(model, test_loader, loss_list, metric_list, post_transform, accelerator, logger)
-        test_loader.dataset.shutdown()
-    logger.info(f'Results : {metrics}')
+        metric, mean_model_time = test_one_epoch(model, test_loader, loss_list, metric_list, post_transform, accelerator, logger)
+    logger.info(f'Results : {metric}')
     logger.info(f"mean Model time: {mean_model_time}")
     logger.info(f'GPU_Memory : {objstr(profiler.get_statistics())}')
     logger.info(f'train_runtime : {profiler.get_runtime()}')

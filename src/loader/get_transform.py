@@ -9,7 +9,6 @@ def get_transform(configs, mode):
     if mode == 'train':
         transform = transforms.Compose([
             transforms.LoadImaged(keys=["image", "label"], image_only=True),
-            transforms.CastToTyped(keys=["image", "label"], dtype=[torch.float32, torch.int16]),
             transforms.EnsureChannelFirstd(keys=["image","label"]),
             transforms.Orientationd(keys=["image", "label"], axcodes='RAS'),
             transforms.EnsureTyped(keys=["image", "label"]),
@@ -28,7 +27,6 @@ def get_transform(configs, mode):
     else:
         transform = transforms.Compose([
             transforms.LoadImaged(keys=["image", "label"], image_only=False),
-            transforms.CastToTyped(keys=["image", "label"], dtype=[torch.float32, torch.int16]),
             transforms.EnsureChannelFirstd(keys=["image","label"]),
             transforms.Orientationd(keys=["image", "label"], axcodes='RAS'),
             transforms.EnsureTyped(keys=["image", "label"]),

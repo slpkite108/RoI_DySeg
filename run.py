@@ -2,7 +2,7 @@ import os
 from src import utils
 from train import train
 from inference import inference
-# from generation import generation
+from generation import generation
 
 from datetime import datetime
 
@@ -16,8 +16,8 @@ def run(configs, run_train, run_inference, run_generation):
     if  run_inference:
         inference(configs)
 
-    # if  run_generation:
-    #     generation()
+    if  run_generation:
+        generation(configs)
     
     
     return
@@ -28,6 +28,6 @@ if __name__ == "__main__":
     
     run_train = True
     run_inference = True
-    run_generation = False
+    run_generation = True
     run(configs, run_train, run_inference, run_generation)
     

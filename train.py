@@ -21,6 +21,7 @@ def train(configs):
     accelerator = utils.getAccelerator(configs.run.work_dir,configs.run.checkpoint, mode='train')
     logger = utils.getLogger(accelerator, mode='train')
     utils.same_seeds(50)
+    torch.cuda.set_per_process_memory_fraction(0.1)
 #endregion
 
     with utils.Profiler(configs.run.device_num, current_pid, interval=0.1) as profiler:
