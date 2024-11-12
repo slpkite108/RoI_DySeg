@@ -110,7 +110,7 @@ def val_one_epoch(model, val_loader, loss_list, metric_list, post_transform, epo
         )
     logger.info(f"Validation Epoch [{epoch + 1}] metric {metric}\n\n")
 
-    mean_acc = metric['Val/mean dice_metric']
+    mean_acc = metric['Val/mean DiceMetric']
     
     return step, mean_acc, batch_acc
 
