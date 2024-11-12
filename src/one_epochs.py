@@ -90,42 +90,6 @@ def val_one_epoch(model, val_loader, loss_list, metric_list, post_transform, epo
         seg_logits = [post_transform(i) for i in seg_logits]
         for metric_name in metric_list:
             metric_list[metric_name](y_pred=seg_logits, y=label)
-            
-        # if i == 0 and epoch==0:
-        #     #take sample
-        #     img_tr = SaveImage(
-        #         output_dir='/home/jayeon/git/RoI_DySeg',  # 파일을 저장할 디렉토리
-        #         output_ext='.nii.gz',      # 파일 확장자
-        #         resample=False,            # 필요한 경우 재샘플링 여부
-        #         separate_folder=False,      # 각 이미지마다 개별 폴더에 저장할지 여부
-        #         print_log=False,
-        #         output_postfix='sample_img',
-        #     )
-        #     gen_tr = SaveImage(
-        #         output_dir='/home/jayeon/git/RoI_DySeg',  # 파일을 저장할 디렉토리
-        #         output_ext='.nii.gz',      # 파일 확장자
-        #         resample=False,            # 필요한 경우 재샘플링 여부
-        #         separate_folder=False,      # 각 이미지마다 개별 폴더에 저장할지 여부
-        #         print_log=False,
-        #         output_postfix='sample_gen',
-        #     )
-        #     gt_tr = SaveImage(
-        #         output_dir='/home/jayeon/git/RoI_DySeg',  # 파일을 저장할 디렉토리
-        #         output_ext='.nii.gz',      # 파일 확장자
-        #         resample=False,            # 필요한 경우 재샘플링 여부
-        #         separate_folder=False,      # 각 이미지마다 개별 폴더에 저장할지 여부
-        #         print_log=False,
-        #         output_postfix='sample_gt',
-        #     )
-        #     img_tr(
-        #     image[0].to('cpu').astype(np.float32),
-        #     )
-        #     gen_tr(
-        #         seg_logits[0].to('cpu').astype(np.int16),
-        #     )
-        #     gt_tr(
-        #         label[0].to('cpu').astype(np.int16),
-        #     )
 
         progress_bar.set_postfix(ValSegLoss = seg_loss.item())
         progress_bar.update(1)
@@ -238,17 +202,17 @@ def gen_one_epoch(model, path, gen_loader, post_transform , ext , accelerator, l
         # img = image.unsqueeze(0).unsqueeze(0).cpu().numpy()
         # gen = seg_logits.unsqueeze(0).unsqueeze(0).cpu().numpy()
         # gt = label.unsqueeze(0).unsqueeze(0).cpu().numpy()
-        
+        #batch == 1
         img_tr(
-            image,
+            image.squeeze(0),
             meta_data=image_meta,
         )
         gen_tr(
-            seg_logits,
+            seg_logits.squeeze(0),
             meta_data=label_meta,
         )
         gt_tr(
-            label,
+            label.squeeze(0),
             meta_data=label_meta,
         )
 

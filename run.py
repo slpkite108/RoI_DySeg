@@ -1,4 +1,5 @@
 import os
+import argparse
 from src import utils
 from train import train
 from inference import inference
@@ -11,23 +12,31 @@ def run(configs, run_train, run_inference, run_generation):
     os.environ["CUDA_VISIBLE_DEVICES"] = configs.run.device_num
     
     if run_train:
+        print('start train')
         train(configs)
 
     if  run_inference:
+        print('start inference')
         inference(configs)
 
     if  run_generation:
+        print('start generation')
         generation(configs)
-    
-    
+
     return
 
+
+
 if __name__ == "__main__":
-    config_path = 'config/Default_SlimUNETR_Amos22_128.yml'
-    configs = utils.Prepare(config_path)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--config_path", type=str, default='/home/work/jayeon/git/RoI_DySeg/config/make/preset/Default_SlimUNETR_lab[1]_[128]_lr[0.002].yml', help="path of the config yml file")
+    parser.add_argument("--train", action='store_false', help='run train mode',default=True)
+    parser.add_argument("--inference", action='store_false', help='run inference mode',default=True)
+    parser.add_argument("--generation", action='store_false', help='run generation mode',default=True)
+    opt = parser.parse_args()
     
-    run_train = True
-    run_inference = True
-    run_generation = True
-    run(configs, run_train, run_inference, run_generation)
+    #config_path = '/home/work/jayeon/git/RoI_DySeg/config/make/preset/Default_SlimUNETR_lab[1]_[128]_lr[0.002].yml'
+    configs = utils.Prepare(opt.config_path)
+    
+    run(configs, opt.train, opt.inference, opt.generation)
     

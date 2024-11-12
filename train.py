@@ -54,14 +54,14 @@ def train(configs):
         scaler = GradScaler()
         
         loss_list = {
-            "dice_loss": losses.DiceLoss(**configs.train.loss.dice_loss),
-            "focal_loss": losses.FocalLoss(**configs.train.loss.focal_loss),
+            "DiceLoss": losses.DiceLoss(**configs.train.loss.DiceLoss),
+            "FocalLoss": losses.FocalLoss(**configs.train.loss.FocalLoss),
         }
         
         metric_list = {
-            'dice_metric': metrics.DiceMetric(**configs.train.metrics.dice_metric),
-            "iou_metric": metrics.MeanIoU(**configs.train.metrics.iou_metric),
-            #'hd95_metric': metrics.HausdorffDistanceMetric(**configs.train.metrics.hd95_metric),
+            'DiceMetric': metrics.DiceMetric(**configs.train.metrics.DiceMetric),
+            "MeanIoU": metrics.MeanIoU(**configs.train.metrics.MeanIoU),
+            #'HausdorffDistanceMetric': metrics.HausdorffDistanceMetric(**configs.train.metrics.hd95_metric),
         }
         
         post_transform = transforms.Compose(

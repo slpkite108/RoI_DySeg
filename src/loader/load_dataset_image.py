@@ -1,7 +1,6 @@
 import os
 import json
 import torch
-import torchio as tio
 
 def get_slice_paths(root_dir):
     slice_paths = []
@@ -25,30 +24,45 @@ def get_slice_paths(root_dir):
     return slice_paths
 
 def load_dataset_image(configs, mode='train'):
-    root = os.path.join(configs.run.loader.dataset.root, str(configs.run.loader.dataset.scale))
+    
+    image_scale = str(configs.run.loader.dataset.scale)
+    label_scale = str(configs.run.loader.dataset.label_scale if configs.run.loader.dataset.label_scale else image_scale)
+    slice_scale = str(configs.run.loader.dataset.slice_scale if configs.run.loader.dataset.slice_scale else label_scale)
+    bbox_scale = str(configs.run.loader.dataset.bbox_scale if configs.run.loader.dataset.bbox_scale else slice_scale)
+    
+    
+    image_root = os.path.join(configs.run.loader.dataset.root, image_scale)
+    label_root = os.path.join(configs.run.loader.dataset.root, label_scale)
+    bbox_root = os.path.join(configs.run.loader.dataset.root, bbox_scale)
+    slice_root = os.path.join(configs.run.loader.dataset.root, slice_scale)
+    
     filter_labels = [1,3,4,6,7,12,15]
     
-    assert os.path.exists(root), f"Root directory does not exist: {root}"
+    assert os.path.exists(image_root), f"Root directory does not exist: {image_root}"
     
-    images_dir = os.path.join(root, 'imagesTr' if mode == 'train' else 'imagesVa')
-    labels_dir = os.path.join(root, 'labelsTr' if mode == 'train' else 'labelsVa')
+    images_dir = os.path.join(image_root, 'imagesTr' if mode == 'train' else 'imagesVa')
+    labels_dir = os.path.join(label_root, 'labelsTr' if mode == 'train' else 'labelsVa')
+    #slices_dir = os.path.join(slice_root, 'slicesTr if mode == 'train' else 'slicesVa')
     
     image_files = sorted(os.listdir(images_dir))
     label_files = sorted(os.listdir(labels_dir))
+    #slice_files = sorted(os.listdir(slices_dir))
     
     image_list = [os.path.join(images_dir, file) for file in image_files]
     label_list = [os.path.join(labels_dir, file) for file in label_files]
-    
+    #slice_list = [os.path.join(slices_dir, file) for file in slice_files]
     
     if mode in ['validation', 'inference', 'generation']:
         if mode == 'validation':
             image_list = image_list[0::2]
             label_list = label_list[0::2]
+            #slice_list = slice_list[0::2]
         elif mode in ['inference', 'generation']:
             image_list = image_list[1::2]
             label_list = label_list[1::2]
+            #slice_list = slice_list[1::2]
     
-    bbox_json_path = os.path.join(root, "bboxTr.json" if mode == 'train' else 'bboxVa.json')
+    bbox_json_path = os.path.join(bbox_root, "bboxTr.json" if mode == 'train' else 'bboxVa.json')
     assert os.path.exists(bbox_json_path), f"bboxTr.json not found at: {bbox_json_path}"
     
     with open(bbox_json_path, 'r') as f:

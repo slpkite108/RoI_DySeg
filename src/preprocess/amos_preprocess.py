@@ -3,10 +3,9 @@ import numpy as np
 import cupy as cp
 import os, sys
 import shutil
-import monai
+
 from tqdm import tqdm
 from cucim.skimage.transform import resize
-from tkinter import filedialog
 import json
 
 #nib_reader = monai.data.NibabelReader()
@@ -180,8 +179,8 @@ def main(root_path):
             make_bbox_list(root=target_path,name='bboxVa.json', label_list = label_list, target_list=[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15])
         
 if __name__ == "__main__":
-    device = 3
-    root_path = '/data/jayeon/dataset/Amos22_RAS/'
+    device = 0
+    root_path = '/home/work/.dataset/Amos22_RAS/'
     with cp.cuda.Device(device):
         main(root_path=root_path)
             
