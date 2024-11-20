@@ -3,12 +3,48 @@ import numpy as np
 import cupy as cp
 import os, sys
 import shutil
-
+from PIL import Image
 from tqdm import tqdm
 from cucim.skimage.transform import resize
 import json
 
-#nib_reader = monai.data.NibabelReader()
+
+def save_center_slices(image_list, target):
+    with tqdm(image_list) as pbar:
+        for file_path in pbar:
+            # 이미지 로드 (NumPy 배열로 변환)
+            img = nib.load(file_path)
+            np_image = np.array(img.dataobj)
+            
+            # intensity scaling (0-255로 조정)
+            np_image = np_image - np_image.min()  # 최소값을 0으로 맞추기
+            np_image = (np_image / np_image.max() * 255).astype(np.uint8)  # 최대값을 255로 맞추기
+            
+            # 슬라이스 위치 계산
+            x_center = np_image.shape[0] // 2
+            y_center = np_image.shape[1] // 2
+            z_center = np_image.shape[2] // 2
+
+            # 슬라이스 저장 경로 설정
+            os.makedirs(target, exist_ok=True)
+            
+            # 파일 이름 설정
+            base_name = os.path.basename(file_path).replace('.nii.gz', '')
+
+            # x 축 중앙 슬라이스 저장
+            x_slice = np_image[x_center, :, :]
+            x_slice_img = Image.fromarray(x_slice)
+            x_slice_img.save(os.path.join(target, f"{base_name}_x.png"))
+
+            # y 축 중앙 슬라이스 저장
+            y_slice = np_image[:, y_center, :]
+            y_slice_img = Image.fromarray(y_slice)
+            y_slice_img.save(os.path.join(target, f"{base_name}_y.png"))
+
+            # z 축 중앙 슬라이스 저장
+            z_slice = np_image[:, :, z_center]
+            z_slice_img = Image.fromarray(z_slice)
+            z_slice_img.save(os.path.join(target, f"{base_name}_z.png"))
 
 def calculate_bounding_box(volume, labelmap):
     bboxList = []
@@ -139,6 +175,21 @@ def main(root_path):
         label_list = [os.path.join(os.path.join(origin_path,"labelsVa"),file) for file in sorted(os.listdir(os.path.join(origin_path, "labelsVa")))]
         make_bbox_list(root=origin_path,name='bboxVa.json', label_list = label_list, target_list=[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15])
     
+    if not os.path.exists(os.path.join(origin_path, 'slicesTr')):
+        print('generate slices')
+        image_list = [os.path.join(os.path.join(origin_path,"imagesTr"),file) for file in sorted(os.listdir(os.path.join(origin_path, "imagesTr")))]
+        save_center_slices(image_list = image_list, target=os.path.join(origin_path, 'slicesTr'))
+        
+    if not os.path.exists(os.path.join(origin_path, 'slicesVa')):
+        print('generate slices')
+        image_list = [os.path.join(os.path.join(origin_path,"imagesVa"),file) for file in sorted(os.listdir(os.path.join(origin_path, "imagesVa")))]
+        save_center_slices(image_list = image_list, target=os.path.join(origin_path, 'slicesVa'))
+        
+    if not os.path.exists(os.path.join(origin_path, 'slicesTs')):
+        print('generate slices')
+        image_list = [os.path.join(os.path.join(origin_path,"imagesTs"),file) for file in sorted(os.listdir(os.path.join(origin_path, "imagesTs")))]
+        save_center_slices(image_list = image_list, target=os.path.join(origin_path, 'slicesTs'))
+    
     for size in target_size:  
         target_path = os.path.join(root_path,str(size))
         
@@ -177,6 +228,21 @@ def main(root_path):
             print("generate bboxVa.json")
             label_list = [os.path.join(os.path.join(target_path,"labelsVa"),file) for file in sorted(os.listdir(os.path.join(target_path, "labelsVa")))]
             make_bbox_list(root=target_path,name='bboxVa.json', label_list = label_list, target_list=[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15])
+            
+        if not os.path.exists(os.path.join(target_path, 'slicesTr')):
+            print('generate slices')
+            image_list = [os.path.join(os.path.join(target_path,"imagesTr"),file) for file in sorted(os.listdir(os.path.join(target_path, "imagesTr")))]
+            save_center_slices(image_list = image_list, target=os.path.join(target_path, 'slicesTr'))
+            
+        if not os.path.exists(os.path.join(target_path, 'slicesVa')):
+            print('generate slices')
+            image_list = [os.path.join(os.path.join(target_path,"imagesVa"),file) for file in sorted(os.listdir(os.path.join(target_path, "imagesVa")))]
+            save_center_slices(image_list = image_list, target=os.path.join(target_path, 'slicesVa'))
+            
+        if not os.path.exists(os.path.join(target_path, 'slicesTs')):
+            print('generate slices')
+            image_list = [os.path.join(os.path.join(target_path,"imagesTs"),file) for file in sorted(os.listdir(os.path.join(target_path, "imagesTs")))]
+            save_center_slices(image_list = image_list, target=os.path.join(target_path, 'slicesTs'))
         
 if __name__ == "__main__":
     device = 0

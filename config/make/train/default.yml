@@ -1,16 +1,11 @@
 resume: null
-batch: 4
-lr: 2e-3
 save_cycle: 200
-
-loss:
-  yml_path: default.yml
-
-metrics:
-    yml_path: default.yml
-
 optimizer: 
   yml_path: default.yml
 scheduler:
   warmup_epochs: 5
   max_epochs: 1000
+loss:
+  yml_path: default.yml
+metrics:
+    yml_path: default.yml

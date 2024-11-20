@@ -1,0 +1,5 @@
+target_labels: [15]
+batch_size: 4
+drop_last: true
+num_workers: 4
+pin_memory: true

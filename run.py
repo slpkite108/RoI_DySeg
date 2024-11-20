@@ -1,4 +1,5 @@
 import os
+import torch
 import argparse
 from src import utils
 from train import train
@@ -29,6 +30,7 @@ def run(configs, run_train, run_inference, run_generation, useDeviceNum):
 
 
 if __name__ == "__main__":
+    torch.cuda.init
     parser = argparse.ArgumentParser()
     parser.add_argument("--config_path", type=str, default='/home/work/jayeon/git/RoI_DySeg/config/make/preset/Default_SlimUNETR_lab[1]_[128]_lr[0.002].yml', help="path of the config yml file")
     parser.add_argument("--train", action='store_false', help='run train mode',default=True)

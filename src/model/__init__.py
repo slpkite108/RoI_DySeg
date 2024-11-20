@@ -1,5 +1,6 @@
 # call models
-from src.model.SlimUNETR import SlimUNETR
-
+from .SlimUNETR import SlimUNETR
+from .ROI_DySeg import ROI_DySeg
+from .DETR import DETR
 
 from .registry import getModel

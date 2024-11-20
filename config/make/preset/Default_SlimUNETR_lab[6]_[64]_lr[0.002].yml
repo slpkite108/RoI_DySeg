@@ -1,0 +1,75 @@
+generation:
+  direct_path: null
+  epoch: best
+  weight_path: train
+inference:
+  direct_path: null
+  epoch: best
+  weight_path: train
+run:
+  checkpoint: Default_SlimUNETR_lab[6]_[64]_lr[0.002]
+  device_num: '0'
+  loader:
+    batch_size: 4
+    dataset:
+      bbox_scale: null
+      label_scale: null
+      name: amos22
+      root: /home/work/.dataset/Amos22_RAS/
+      scale: 64
+      image_scale: 128
+      label_scale: 128
+      slice_scale: 128
+      bbox_scale: 128
+    drop_last: true
+    num_workers: 4
+    pin_memory: true
+    target_labels: [6]
+  model:
+    args:
+      blocks: [1, 2, 3, 2]
+      channels: [24, 48, 60]
+      dropout: 0.3
+      embed_dim: 96
+      embedding_dim: 8
+      heads: [1, 2, 4, 4]
+      in_channels: 1
+      out_channels: 1
+      r: [4, 2, 2, 1]
+      shrink: false
+    name: SlimUNETR
+    type: seg
+  work_dir: /home/work/jayeon/result/roi_dyseg/
+train:
+  loss:
+    DiceLoss:
+      sigmoid: true
+      smooth_dr: 1e-5
+      smooth_nr: 0
+      to_onehot_y: false
+    FocalLoss:
+      to_onehot_y: false
+  metrics:
+    DiceMetric:
+      get_not_nans: false
+      include_background: true
+      reduction: mean_batch
+    HausdorffDistanceMetric:
+      get_not_nans: false
+      include_background: true
+      percentile: 95
+      reduction: mean_batch
+    MeanIoU:
+      get_not_nans: false
+      include_background: true
+      reduction: mean_batch
+  optimizer:
+    betas: [0.9, 0.95]
+    lr: 0.002
+    opt: adamw
+    weight_decay: 0.05
+  resume: null
+  save_cycle: 200
+  scheduler:
+    max_epochs: 1000
+    warmup_epochs: 5

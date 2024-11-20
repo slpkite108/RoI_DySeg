@@ -1,6 +1,13 @@
-  dice_metric:
-    smooth: 1e-6
-  iou_metric:
-    smooth: 1e-6
-  hd95_metric:
-    percentile: 95
+DiceMetric:
+  include_background: true
+  reduction: mean_batch
+  get_not_nans: false
+MeanIoU:
+  include_background: true
+  reduction: mean_batch
+  get_not_nans: false
+HausdorffDistanceMetric:
+  percentile: 95
+  include_background: true
+  reduction: mean_batch
+  get_not_nans: false

@@ -1,4 +1,5 @@
 name: SlimUNETR
+type: seg
 args:
   shrink: false
   in_channels: 1

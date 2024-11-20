@@ -1,14 +1,14 @@
 import torch
 import numpy as np
-
-from monai.transforms import SaveImage
+from monai.data import MetaTensor
+from monai.transforms import SaveImage, Resize, Pad
 from objprint import objstr
 import os
 from tqdm import tqdm
 from torch.cuda.amp import autocast
 from datetime import datetime, timedelta
 
-def train_one_epoch(model, train_loader, optimizer, scheduler, scaler, loss_list, metric_list, post_transform, epoch, step, accelerator, logger):
+def train_one_epoch(model, train_loader, optimizer, scheduler, loss_list, metric_list, post_transform, epoch, step, accelerator, logger):
     model.train()
     
     progress_bar = tqdm(range(len(train_loader)), leave=False)
@@ -17,8 +17,11 @@ def train_one_epoch(model, train_loader, optimizer, scheduler, scaler, loss_list
         optimizer.zero_grad()
         image = image_batch['image']
         label = image_batch['label']
-        #with autocast():
-        seg_logits = model(image)
+        #bbox = image_batch['bbox']
+        #roi = image_batch['roi']
+
+        seg_logits = model(image) 
+        
         seg_loss = torch.stack([loss_list[loss_name](seg_logits, label) for loss_name in loss_list]).sum()
 
         accelerator.backward(seg_loss)
@@ -30,7 +33,7 @@ def train_one_epoch(model, train_loader, optimizer, scheduler, scaler, loss_list
             },
             step=step,
         )
-        
+
         seg_logits = [post_transform(i) for i in seg_logits]
         for metric_name in metric_list:
             metric_list[metric_name](y_pred=seg_logits, y=label)
@@ -74,7 +77,7 @@ def val_one_epoch(model, val_loader, loss_list, metric_list, post_transform, epo
         progress_bar.set_description(f'Validation Epoch [{epoch+1}] ')
         image = image_batch['image']
         label = image_batch['label']
-        
+
         seg_logits = model(image)
         
         #with autocast():
@@ -124,6 +127,8 @@ def test_one_epoch(model, test_loader, loss_list, metric_list,post_transform, ac
         progress_bar.set_description(f'Inference ')
         image = image_batch['image']
         label = image_batch['label']
+        bbox = image_batch['bbox']
+        origin_shape = origin_shape = image_batch['image_meta_dict']['spatial_shape']
         
         model_start = datetime.now()
         seg_logits = model(image)
@@ -132,10 +137,13 @@ def test_one_epoch(model, test_loader, loss_list, metric_list,post_transform, ac
         
         seg_loss = torch.stack([loss_list[loss_name](seg_logits, label) for loss_name in loss_list]).sum()
         
-        seg_logits = [post_transform(i) for i in seg_logits]
+        seg_logits = post_transform(seg_logits)
+        
+        seg_logits = restore_original_image(seg_logits, bbox, origin_shape, meta=label.meta).unsqueeze(0)
+        
         
         for metric_name in metric_list:
-            metric_list[metric_name](y_pred=seg_logits, y=label)
+            metric_list[metric_name](y_pred=seg_logits, y=image_batch['gt_label'])
         progress_bar.set_postfix(ValSegLoss = seg_loss.item())
         progress_bar.update(1)
         
@@ -193,23 +201,23 @@ def gen_one_epoch(model, path, gen_loader, post_transform , ext , accelerator, l
         image = image_batch['image'] # b, c, w, h, d
         image_meta = image_batch['image_meta_dict']
         label = image_batch['label']
+        bbox = image_batch['bbox']
         label_meta = image_batch['label_meta_dict']
-
+        origin_shape = image_meta['spatial_shape']
+        
         seg_logits = model(image)
-
+        
         seg_logits = post_transform(seg_logits)
         
-        # img = image.unsqueeze(0).unsqueeze(0).cpu().numpy()
-        # gen = seg_logits.unsqueeze(0).unsqueeze(0).cpu().numpy()
-        # gt = label.unsqueeze(0).unsqueeze(0).cpu().numpy()
-        #batch == 1
+        seg_logits = restore_original_image(seg_logits, bbox, origin_shape, meta=label.meta)
+        
+        
         img_tr(
-            image.squeeze(0),
+            image_batch['gt_image'].squeeze(0),
             meta_data=image_meta,
         )
         gen_tr(
-            seg_logits.squeeze(0),
-            meta_data=label_meta,
+            seg_logits,
         )
         gt_tr(
             label.squeeze(0),
@@ -232,3 +240,26 @@ def custom_name_formatter(meta_dict):
     # 새로운 파일명 생성
     new_filename = f"{original_filename}_idx{index}"
     return new_filename
+
+def restore_original_image(cropped_img, bbox, original_shape, meta=None):
+    # BBox 좌표를 받아와 원본 이미지에서 해당 위치에 crop된 이미지를 복사합니다.
+    # bbox는 shape (1, 1, 6)이며 (x_min, y_min, z_min, x_max, y_max, z_max) 형식을 가집니다.
+    x_min, y_min, z_min, x_max, y_max, z_max = bbox[0, 0].to(torch.int)
+    original_shape = original_shape # [c, 3]
+
+    # BBox 영역 크기로 먼저 resize
+    target_shape = (x_max - x_min, y_max - y_min, z_max - z_min)
+    resize_transform = Resize(target_shape, mode='nearest')
+    resized_cropped_img = resize_transform(cropped_img.squeeze(0))
+
+    c = cropped_img.shape[1]
+    
+    restored_img = torch.zeros((c, original_shape[0,0], original_shape[0,1], original_shape[0,2]),dtype=resized_cropped_img.dtype, device=resized_cropped_img.device)
+    restored_img[:, x_min:x_max, y_min:y_max, z_min:z_max] = resized_cropped_img
+    restored_img = MetaTensor(restored_img, meta=cropped_img.meta if meta == None else meta)
+    #pad_transform = Pad([(0,0),(x_min, original_shape[0,0] - x_max),(y_min, original_shape[0,1] - y_max),(z_min, original_shape[0,2] - z_max)], mode='constant')
+    #pad_transform = Pad([(0,0),(original_shape[0,0] - x_max, x_min),(original_shape[0,1] - y_max, y_min),(original_shape[0,2] - z_max, z_min)], mode='constant')
+    
+    #restored_img = pad_transform(resized_cropped_img.to('cpu'))
+
+    return restored_img

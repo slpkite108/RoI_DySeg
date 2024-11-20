@@ -1,4 +1,5 @@
 import pynvml
+import torch
 import threading
 import time
 from datetime import datetime
@@ -12,8 +13,21 @@ def get_process_gpu_memory_info(handle, pid):
     processes = pynvml.nvmlDeviceGetComputeRunningProcesses(handle)
     for process in processes:
         if process.pid == pid:
-            return process.usedGpuMemory / 1024**2  # 사용된 메모리 (MB 단위)
-    return 0  # 해당 PID가 없는 경우 0 반환
+            # NVML 메모리 사용량
+            nvml_memory = process.usedGpuMemory / 1024**2  # MB 단위
+            # PyTorch 메모리 사용량
+            torch_memory_allocated = torch.cuda.memory_allocated() / 1024**2  # MB 단위
+            torch_memory_reserved = torch.cuda.memory_reserved() / 1024**2  # MB 단위
+            return {
+                'nvml_memory': nvml_memory,
+                'torch_memory_allocated': torch_memory_allocated,
+                'torch_memory_reserved': torch_memory_reserved
+            }
+    return {
+        'nvml_memory': 0,
+        'torch_memory_allocated': 0,
+        'torch_memory_reserved': 0
+    }  # 해당 PID가 없는 경우 0 반환
 
 class Profiler:
     _shared_thread = None
@@ -27,8 +41,12 @@ class Profiler:
             
         self.device_num = int(device_num)
         self.pid = pid
-        self.max_memory_usage = 0
-        self.statistics = Statistics()  # Statistics 객체 추가
+        self.max_memory_usage = {'nvml_memory': 0, 'torch_memory_allocated': 0, 'torch_memory_reserved': 0}
+        self.statistics = {
+            'nvml_memory': Statistics(),
+            'torch_memory_allocated': Statistics(),
+            'torch_memory_reserved': Statistics()
+        }
         self.handle = get_gpu_handle(self.device_num)
         Profiler._handles.append((self.handle, self))
         
@@ -45,18 +63,20 @@ class Profiler:
     def _profile_memory(cls):
         while not cls._shared_stop_event.is_set():
             for handle, profiler in cls._handles:
-                current_memory_usage = get_process_gpu_memory_info(handle, profiler.pid)
-                profiler.statistics.add_number(current_memory_usage)  # 통계에 현재 메모리 사용량 추가
-                if current_memory_usage > profiler.max_memory_usage:
-                    profiler.max_memory_usage = current_memory_usage
+                memory_info = get_process_gpu_memory_info(handle, profiler.pid)
+                
+                # 각 메모리 사용량을 통계에 추가
+                for key in memory_info:
+                    profiler.statistics[key].add_number(memory_info[key])
+                    if memory_info[key] > profiler.max_memory_usage[key]:
+                        profiler.max_memory_usage[key] = memory_info[key]
+                
             time.sleep(cls._shared_interval)
 
     def start(self):
-        # 이미 공유 스레드가 실행 중이므로 따로 할 일 없음
-        pass
+        pass  # 이미 공유 스레드가 실행 중이므로 따로 할 일 없음
 
     def stop(self):
-        # 공유 스레드를 종료하려면 모든 객체가 종료해야 함
         Profiler._handles.remove((self.handle, self))
         if not Profiler._handles:
             Profiler._shared_stop_event.set()
@@ -69,11 +89,27 @@ class Profiler:
     
     def get_statistics(self):
         return {
-            'sum': self.statistics.get_sum(),
-            'mean': self.statistics.get_mean(),
-            'median': self.statistics.get_median(),
-            'min': self.statistics.get_min(),
-            'max': self.statistics.get_max()
+            'nvml_memory': {
+                'sum': self.statistics['nvml_memory'].get_sum(),
+                'mean': self.statistics['nvml_memory'].get_mean(),
+                'median': self.statistics['nvml_memory'].get_median(),
+                'min': self.statistics['nvml_memory'].get_min(),
+                'max': self.statistics['nvml_memory'].get_max()
+            },
+            'torch_memory_allocated': {
+                'sum': self.statistics['torch_memory_allocated'].get_sum(),
+                'mean': self.statistics['torch_memory_allocated'].get_mean(),
+                'median': self.statistics['torch_memory_allocated'].get_median(),
+                'min': self.statistics['torch_memory_allocated'].get_min(),
+                'max': self.statistics['torch_memory_allocated'].get_max()
+            },
+            'torch_memory_reserved': {
+                'sum': self.statistics['torch_memory_reserved'].get_sum(),
+                'mean': self.statistics['torch_memory_reserved'].get_mean(),
+                'median': self.statistics['torch_memory_reserved'].get_median(),
+                'min': self.statistics['torch_memory_reserved'].get_min(),
+                'max': self.statistics['torch_memory_reserved'].get_max()
+            }
         }
 
     def get_runtime(self):
@@ -85,7 +121,6 @@ class Profiler:
     def __enter__(self):
         self.start()
         self.start_time = datetime.now()
-        
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -94,9 +129,3 @@ class Profiler:
         self.runtime = (self.end_time - self.start_time)
         if not Profiler._handles:  # 모든 프로파일러가 종료되었을 때만 NVML 종료
             self.shutdown()
-
-# 사용 예시
-# with Profiler(framework_obj.device_num, framework_obj.current_pid, interval=0.1) as train_profiler:
-#     # ... Training code ...
-#     stats = train_profiler.get_statistics()
-#     print("Memory Statistics:", stats)

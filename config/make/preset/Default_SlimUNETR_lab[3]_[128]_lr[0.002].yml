@@ -7,79 +7,61 @@ inference:
   epoch: best
   weight_path: train
 run:
-  checkpoint: Dev_SlimUNETR_amos22_lab1_128_lr0.002
-  device_num: "1"
+  checkpoint: Default_SlimUNETR_lab[3]_[128]_lr[0.002]
+  device_num: '0'
   loader:
-    target_labels:
-      - 1
     batch_size: 4
+    dataset:
+      bbox_scale: null
+      label_scale: null
+      name: amos22
+      root: /home/work/.dataset/Amos22_RAS/
+      scale: 128
+      slice_scale: null
     drop_last: true
     num_workers: 4
     pin_memory: true
-    dataset:
-      name: amos22
-      root: /data/jayeon/dataset/Amos22_RAS/
-      scale: 128
-      label_scale: null
-      bbox_scale: null
-      slice_scale: null
+    target_labels: [3]
   model:
     args:
-      shrink: false #true when 16
-      blocks:
-      - 1
-      - 2
-      - 3
-      - 2
-      channels:
-      - 24
-      - 48
-      - 60
+      blocks: [1, 2, 3, 2]
+      channels: [24, 48, 60]
       dropout: 0.3
       embed_dim: 96
       embedding_dim: 64
-      heads:
-      - 1
-      - 2
-      - 4
-      - 4
+      heads: [1, 2, 4, 4]
       in_channels: 1
       out_channels: 1
-      r:
-      - 4
-      - 2
-      - 2
-      - 1
+      r: [4, 2, 2, 1]
+      shrink: false
     name: SlimUNETR
-  work_dir: /data/jayeon/TrainedData/Paper/
+  work_dir: /home/work/jayeon/result/roi_dyseg/
 train:
   loss:
-    dice_loss:
-      smooth_nr: 0
-      smooth_dr: 1e-5
-      to_onehot_y: false
+    DiceLoss:
       sigmoid: true
-    focal_loss:
+      smooth_dr: 1e-5
+      smooth_nr: 0
+      to_onehot_y: false
+    FocalLoss:
       to_onehot_y: false
   metrics:
-    dice_metric:
+    DiceMetric:
+      get_not_nans: false
       include_background: true
       reduction: mean_batch
+    HausdorffDistanceMetric:
       get_not_nans: false
-    hd95_metric:
+      include_background: true
       percentile: 95
+      reduction: mean_batch
+    MeanIoU:
+      get_not_nans: false
       include_background: true
       reduction: mean_batch
-      get_not_nans: false
-    iou_metric:
-      include_background: true
-      reduction: mean_batch
-      get_not_nans: false
   optimizer:
-    betas:
-    - 0.9
-    - 0.95
-    lr: 0.002 #0.0025
+    betas: [0.9, 0.95]
+    lr: 0.002
     opt: adamw
     weight_decay: 0.05
   resume: null

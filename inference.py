@@ -5,9 +5,10 @@ from easydict import EasyDict
 from timm.optim import optim_factory
 from objprint import objstr
 from monai import losses, metrics, transforms
-
+from src.losses.DETR_Criterion import DETR_Criterion
 from src import utils, loader
 from src.one_epochs import test_one_epoch
+from src.det_one_epochs import det_test_one_epoch
 from src.model import getModel
 from src.optimizer import LinearWarmupCosineAnnealingLR
 
@@ -32,10 +33,15 @@ def inference(configs):
     #endregion
         
     #region Prepare Parameters
-        loss_list = {
-            "DiceLoss": losses.DiceLoss(**configs.train.loss.DiceLoss),
-            "FocalLoss": losses.FocalLoss(**configs.train.loss.FocalLoss),
-        }
+        if configs.run.model.type in ['seg']:
+            loss_list = {
+                "DiceLoss": losses.DiceLoss(**configs.train.loss.DiceLoss),
+                "FocalLoss": losses.FocalLoss(**configs.train.loss.FocalLoss),
+            }
+        else:
+            loss_list = {
+                "DETR_Criterion": DETR_Criterion(**configs.train.loss.DETR_Criterion)
+            }
         
         metric_list = {
             'DiceMetric': metrics.DiceMetric(**configs.train.metrics.DiceMetric),
@@ -64,8 +70,10 @@ def inference(configs):
         logger.info(f"inference datas : {len(test_loader.dataset)}")
     
 #region inference
-
-        metric, mean_model_time = test_one_epoch(model, test_loader, loss_list, metric_list, post_transform, accelerator, logger)
+        if configs.run.model.type == 'seg':
+            metric, mean_model_time = test_one_epoch(model, test_loader, loss_list, metric_list, post_transform, accelerator, logger)
+        else:
+            metric, mean_model_time = det_test_one_epoch(model, test_loader, loss_list, metric_list, post_transform, accelerator, logger)
         
     logger.info(f'Results : {metric}')
     logger.info(f"mean Model time: {mean_model_time}")

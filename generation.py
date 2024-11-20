@@ -8,6 +8,7 @@ from monai import transforms
 
 from src import utils, loader
 from src.one_epochs import gen_one_epoch
+from src.det_one_epochs import det_gen_one_epoch
 from src.model import getModel
 
 
@@ -52,9 +53,13 @@ def generation(configs):
         logger.info(f"generation datas : {len(gen_loader.dataset)}")
     
 #region inference
-        ext_list = ['.nii.gz', '.nii']
         path = os.path.join(configs.run.work_dir, configs.run.checkpoint, 'generation')
-        gen_one_epoch(model, path, gen_loader, post_transform, ext_list[0] ,accelerator, logger)
+        if configs.run.model.type == 'seg':
+            ext_list = ['.nii.gz', '.nii']
+            gen_one_epoch(model, path, gen_loader, post_transform, ext_list[0] ,accelerator, logger)
+        else:
+            ext_list = ['.png']
+            det_gen_one_epoch(model, path, gen_loader, post_transform, ext_list[0] ,accelerator, logger)
         
     logger.info(f'GPU_Memory : {objstr(profiler.get_statistics())}')
     logger.info(f'train_runtime : {profiler.get_runtime()}')

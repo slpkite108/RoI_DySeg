@@ -1,6 +1,6 @@
-root: /data/jayeon/Dataset/amos22/
-scale: origin
-imageFolder: imagesTr
-labelFolder: labelsTr
-bbox: bboxTr.json
 name: amos22
+root: /home/work/.dataset/Amos22_RAS/
+scale: 128
+label_scale: null
+bbox_scale: null
+slice_scale: null
