@@ -1,0 +1,116 @@
+generation:
+  direct_path: null
+  epoch: best
+  weight_path: train
+inference:
+  direct_path: null
+  epoch: best
+  weight_path: train
+run:
+  checkpoint: test_comb_lab1_32
+  det_check: test_lab1
+  seg_check: Second_ROI_DySeg_lab[1]_[32]_lr[0.002]
+  device_num: "0"
+  loader:
+    target_labels:
+      - 1
+    batch_size: 4
+    drop_last: true
+    num_workers: 4
+    pin_memory: true
+    detector: true
+    dataset:
+      name: amos22
+      root: /home/work/.dataset/Amos22_RAS/
+      scale: 32
+      image_scale: 128
+      label_scale: 128
+      slice_scale: 128
+      bbox_scale: 128
+  model:
+    detecter:
+      args:
+        args:
+          backbone_name: resnet50
+          dilation: True
+          position_embedding: sine    #sine, learned
+          enc_layers: 6
+          dec_layers: 6
+          dim_feedforward: 2048
+          hidden_dim: 256
+          dropout: 0.1
+          nheads: 8
+          num_queries: 1 #1
+          pre_norm: True
+          aux_loss: False
+          num_classes: 1
+          lr_backbone: 0.00001
+          masks: False
+      name: DETR
+      type: det
+    segmenter:
+      args:
+        blocks: [1, 2, 3, 2]
+        channels: [24, 48, 60]
+        conv_r: [4, 2, 2, 2]
+        dropout: 0.3
+        embed_dim: 96
+        embedding_dim: 8
+        heads: [1, 2, 4, 4]
+        in_channels: 1
+        out_channels: 1
+        r: [4, 2, 2, 1]
+      name: ROI_DySeg 
+      type: seg 
+    type: comb #det, seg, comb
+    name: comb
+  work_dir: /home/work/jayeon/result/roi_dyseg/
+train:
+  loss:
+    detecter:
+      DETR_Criterion:
+        matcher:
+          cost_class: 1
+          cost_bbox: 5
+          cost_giou: 2
+        weight_dict:
+          loss_ce: 1
+          loss_bbox: 5
+          loss_giou: 2
+        eos_coef: 0.1
+        losses: [labels, boxes, cardinality]
+    segmenter:
+      DiceLoss:
+        sigmoid: true
+        smooth_dr: 1e-5
+        smooth_nr: 0
+        to_onehot_y: false
+      FocalLoss:
+        to_onehot_y: false
+
+  metrics:
+    DiceMetric:
+      include_background: true
+      reduction: mean_batch
+      get_not_nans: false
+    HausdorffDistanceMetric:
+      percentile: 95
+      include_background: true
+      reduction: mean_batch
+      get_not_nans: false
+    MeanIoU:
+      include_background: true
+      reduction: mean_batch
+      get_not_nans: false
+  optimizer:
+    betas:
+    - 0.9
+    - 0.95
+    lr: 0.00005 #0.002 #0.0025
+    opt: adamw
+    weight_decay: 0.05
+  resume: null
+  save_cycle: 200
+  scheduler:
+    max_epochs: 1000
+    warmup_epochs: 5

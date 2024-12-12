@@ -11,10 +11,10 @@ from src.model.registry import register_model
 class ROI_DySeg(nn.Module):
     def __init__(
         self,
-        in_channels=4,
-        out_channels=3,
+        in_channels=1,
+        out_channels=1,
         embed_dim=96,
-        embedding_dim=64,
+        embedding_dim=8,
         channels=(24, 48, 60),
         blocks=(1, 2, 3, 2),
         heads=(1, 2, 4, 4),

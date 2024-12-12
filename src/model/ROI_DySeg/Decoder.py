@@ -3,20 +3,15 @@ import torch.nn as nn
 from .Block import Block
 
 class Stage(nn.Module):
-    def __init__(self, dim_in, dim_out, block, r, conv_r, heads, idx, lazy=False, use_restore=True):
+    def __init__(self, dim_in, dim_out, block, r, conv_r, heads, idx, lazy=False):
         super(Stage, self).__init__()
         blocks = []
-        for _ in range(block):
-            blocks.append(Block(channels=dim_in, r=r, heads=heads, lazy=lazy))
+        for i in range(block):
+            blocks.append(Block(channels=dim_in, r=r, heads=heads, last=True if i+1==block else False, lazy=lazy))
         self.blocks = nn.Sequential(*blocks)
         self.TSconv = TransposedConvLayer(dim_in=dim_in, dim_out=dim_out, r=conv_r, lazy=lazy) #r)#4212
-        if use_restore:
-            self.RestoreConv = DepthwiseConvLayer(dim_in=dim_in, dim_out=dim_in, r=conv_r//2 if not conv_r==1 else 1, lazy=lazy)
-        self.use_restore = use_restore
     
     def forward(self, x):
-        if self.use_restore:
-            x = self.RestoreConv(x)
         x = self.blocks(x)
         x = self.TSconv(x)
         return x
@@ -61,15 +56,19 @@ class Decoder(nn.Module):
             if i == 0:
                 Stages.append(Stage(dim_in=channels[i], dim_out=out_channels, block=blocks[i], r=r[i], conv_r=conv_r[i], heads=heads[i], idx = i, lazy=True))
             elif i == 3:
-                Stages.append(Stage(dim_in=embed_dim, dim_out=channels[i-1], block=blocks[i], r=r[i], conv_r=conv_r[i], heads=heads[i], idx = i, use_restore=False))
+                Stages.append(Stage(dim_in=embed_dim, dim_out=channels[i-1], block=blocks[i], r=r[i], conv_r=conv_r[i], heads=heads[i], idx = i))
             else:
                 Stages.append(Stage(dim_in=channels[i], dim_out=channels[i-1], block=blocks[i], r=r[i], conv_r=conv_r[i], heads=heads[i], idx = i, lazy=True))
         self.Stages = nn.ModuleList(Stages)
         
         self.SegHeadList = nn.ModuleDict(
+            # {
+            #     '1':TransposedConvLayer(dim_in=channels[0], dim_out=out_channels, r=1, lazy=True), #32
+            #     '2':TransposedConvLayer(dim_in=channels[1], dim_out=out_channels, r=1, lazy=True) #16
+            # }
             {
-                '1':TransposedConvLayer(dim_in=channels[0], dim_out=out_channels, r=1, lazy=True), #32
-                '2':TransposedConvLayer(dim_in=channels[1], dim_out=out_channels, r=1, lazy=True) #16
+                '1':nn.ConvTranspose3d(channels[0], out_channels, kernel_size=2, stride=2), #32
+                '2':nn.ConvTranspose3d(channels[1], out_channels, kernel_size=2, stride=2) #16
             }
             # [
             #     nn.ConvTranspose3d(channels[0], out_channels, kernel_size=1, stride=1),

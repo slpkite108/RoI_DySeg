@@ -7,14 +7,16 @@ from src.utils.misc import (nested_tensor_from_tensor_list,
                        accuracy, get_world_size, interpolate,
                        is_dist_avail_and_initialized, reduce_dict)
 
+from src.losses.LossCaller import register_custom_loss
 
+@register_custom_loss('DETR_Criterion')
 class DETR_Criterion(nn.Module):
     """ This class computes the loss for DETR.
     The process happens in two steps:
         1) we compute hungarian assignment between ground truth boxes and the outputs of the model
         2) we supervise each pair of matched ground-truth / prediction (supervise class and box)
     """
-    def __init__(self, matcher, weight_dict, eos_coef, losses):
+    def __init__(self, num_classes, matcher, weight_dict, eos_coef, losses):
         """ Create the criterion.
         Parameters:
             num_classes: number of object categories, omitting the special no-object category
@@ -24,7 +26,7 @@ class DETR_Criterion(nn.Module):
             losses: list of all the losses to be applied. See get_loss for list of available losses.
         """
         super().__init__()
-        self.num_classes = 1 #num_classes
+        self.num_classes = num_classes
         self.matcher = HungarianMatcher(**matcher)
         self.weight_dict = weight_dict
         self.eos_coef = eos_coef
@@ -152,7 +154,6 @@ class DETR_Criterion(nn.Module):
 
         # Retrieve the matching between the outputs of the last layer and the targets
         indices = self.matcher(outputs_without_aux, targets)
-
         # Compute the average number of target boxes accross all nodes, for normalization purposes
         num_boxes = sum(len(t["labels"]) for t in targets)
         num_boxes = torch.as_tensor([num_boxes], dtype=torch.float, device=next(iter(outputs.values())).device)
@@ -165,7 +166,7 @@ class DETR_Criterion(nn.Module):
         for loss in self.losses:
             losses.update(self.get_loss(loss, outputs, targets, indices, num_boxes))
 
-        # In case of auxiliary losses, we repeat this process with the output of each intermediate layer.
+        # In case of auxiliary losses, we repeat this process witn
         if 'aux_outputs' in outputs:
             for i, aux_outputs in enumerate(outputs['aux_outputs']):
                 indices = self.matcher(aux_outputs, targets)
@@ -238,7 +239,14 @@ class HungarianMatcher(nn.Module):
             For each batch element, it holds:
                 len(index_i) = len(index_j) = min(num_queries, num_target_boxes)
         """
-        
+        # print(outputs)
+        # print(outputs['pred_logits'].shape)
+        # print(outputs['pred_boxes'].shape)
+        # print(targets)
+        # print(len(targets))
+        # print(targets[0]['labels'].shape)
+        # print(targets[0]['boxes'].shape)
+        # exit(0)
         bs, num_queries = outputs["pred_logits"].shape[:2]
 
         # We flatten to compute the cost matrices in a batch

@@ -6,16 +6,19 @@ from .get_transform import get_transform
 from .det_transform import det_transform
 import nibabel as nib
 
-def get_loader(configs, mode='train'):
+def get_loader(configs, mode='train', type = 'seg', batch_size = 4, shuffle = True, num_workers = 1, pin_memory = False, drop_last = True):
 
     assert mode in ['train', 'inference', 'validation', 'generation']
-    subjects = image_loader(configs, mode)
-    if configs.run.model.type in ['det']:
+    subjects = image_loader(configs, type, mode)
+    if type in ['det']:
         transform = det_transform(configs, mode)
         
-    elif configs.run.model.type in ['seg']:
+    elif type in ['seg']:
         transform = get_transform(configs, mode)
         
+    batch_size = batch_size if (mode in ['train', 'validation']) else 1
+    shuffle = shuffle if mode in ['train', 'validation'] else False
+    drop_last = drop_last if not mode in ['generation'] else False
 
     if mode in ['inference','generation']:
         dataset = Dataset(
@@ -31,11 +34,6 @@ def get_loader(configs, mode='train'):
         )
         dataset.start()
 
-    batch_size = configs.run.loader.batch_size if (mode in ['train', 'validation']) else 1
-    shuffle = True if mode in ['train', 'validation'] else False
-    num_workers = 1 #configs.run.loader.num_workers
-    pin_memory = False #configs.run.loader.pin_memory 
-    drop_last = configs.run.loader.drop_last if not mode in ['generation'] else False
     
     loader = DataLoader(
         dataset,

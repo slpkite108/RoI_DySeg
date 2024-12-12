@@ -20,16 +20,17 @@ def det_train_one_epoch(model, train_loader, optimizer, scheduler, loss_list, me
     for i, image_batch in enumerate(train_loader):
         progress_bar.set_description(f'Train Epoch [{epoch+1}] ')
         optimizer.zero_grad()
-        image = image_batch['image']#can be slices
-        label = image_batch['label']
-
+        x,y,z = image_batch['x'],image_batch['y'],image_batch['z']
+        bbox = image_batch['bbox']
+        bbox_x, bbox_y, bbox_z = box_ops.box_xyxy_to_cxcywh(bbox[:,:,(1,2,4,5)]/128), box_ops.box_xyxy_to_cxcywh(bbox[:,:,(0,2,3,5)]/128), box_ops.box_xyxy_to_cxcywh(bbox[:,:,(0,1,3,4)]/128)
+        
+        image = torch.cat((x, y, z), dim=1)
+        label = torch.cat((bbox_x,bbox_y,bbox_z), dim=1)
+        
         seg_logits = model(image)
-        #seg_logits = pp(seg_logits, torch.tensor([image.shape[2], image.shape[3]],device='cuda').unsqueeze(0).repeat(image.shape[0], 1))
-        
         #print(seg_logits)
-        
         try:
-            label = [{'labels': torch.tensor([0], device='cuda:0'), 'boxes': b} for b in label]
+            label = [{'labels': torch.tensor([0,1,2], device='cuda:0'), 'boxes': b} for b in label]
             seg_loss, metric = zip(*[loss_list[loss_name](seg_logits, label) for loss_name in loss_list])
             seg_loss, metric = seg_loss[0].sum(), metric[0]
         except Exception as e:
@@ -40,7 +41,7 @@ def det_train_one_epoch(model, train_loader, optimizer, scheduler, loss_list, me
         optimizer.step()
         accelerator.log(
             {
-                "Train/Segmentor Loss": float(seg_loss),
+                "Train/Detecter Loss": float(seg_loss),
             },
             step=step,
         )
@@ -48,7 +49,7 @@ def det_train_one_epoch(model, train_loader, optimizer, scheduler, loss_list, me
         for key, value in metric.items():
             grouped_dict[f'Train/mean {key}'].append(value)
             
-        progress_bar.set_postfix(TrainSegLoss = seg_loss, Current_LR=scheduler.get_last_lr())
+        progress_bar.set_postfix(TrainDetLoss = seg_loss, Current_LR=scheduler.get_last_lr())
         step += 1
         progress_bar.update(1)
         
@@ -75,17 +76,23 @@ def det_val_one_epoch(model, val_loader, loss_list, metric_list, post_transform,
     #pp = PostProcess()
     for i, image_batch in enumerate(val_loader):
         progress_bar.set_description(f'Validation Epoch [{epoch+1}] ')
-        image = image_batch['image']
-        label = image_batch['label']
+        x,y,z = image_batch['x'],image_batch['y'],image_batch['z']
+        bbox = image_batch['bbox']
+        bbox_x, bbox_y, bbox_z = box_ops.box_xyxy_to_cxcywh(bbox[:,:,(1,2,4,5)]/128), box_ops.box_xyxy_to_cxcywh(bbox[:,:,(0,2,3,5)]/128), box_ops.box_xyxy_to_cxcywh(bbox[:,:,(0,1,3,4)]/128)
+        image = torch.cat((x, y, z), dim=1)
+        label = torch.cat((bbox_x,bbox_y,bbox_z), dim=1)
         
         seg_logits = model(image)
-        label = [{'labels': torch.tensor([0], device='cuda:0'), 'boxes': b} for b in label]
+
+        label = [{'labels': torch.tensor([0,1,2], device='cuda:0'), 'boxes': b} for b in label]
+        
         seg_loss, metric = zip(*[loss_list[loss_name](seg_logits, label) for loss_name in loss_list])
+
         seg_loss, metric = seg_loss[0].sum(), metric[0]
         
         accelerator.log(
             {
-                "Val/Segmentor Loss": float(seg_loss),
+                "Val/Detecter Loss": float(seg_loss),
             },
             step=step,
         )
@@ -93,7 +100,8 @@ def det_val_one_epoch(model, val_loader, loss_list, metric_list, post_transform,
         for key, value in metric.items():
             grouped_dict[f'Val/mean {key}'].append(value)
 
-        progress_bar.set_postfix(ValSegLoss = seg_loss.item())
+        progress_bar.set_postfix(ValDetLoss = seg_loss.item())
+        step += 1
         progress_bar.update(1)
         
     progress_bar.clear()
@@ -102,7 +110,7 @@ def det_val_one_epoch(model, val_loader, loss_list, metric_list, post_transform,
     metric = {key: sum(values) / len(values) for key, values in grouped_dict.items()}
     logger.info(f"Validation Epoch [{epoch + 1}] metric {metric}\n\n")
 
-    mean_acc = metric['Val/mean loss_giou']
+    mean_acc = seg_loss #metric['Val/mean loss_giou']
     batch_acc = 0
     
     return step, mean_acc, batch_acc
@@ -118,19 +126,26 @@ def det_test_one_epoch(model, test_loader, loss_list, metric_list,post_transform
     progress_bar = tqdm(range(len(test_loader)), leave=False)
     for i, image_batch in enumerate(test_loader):
         progress_bar.set_description(f'Inference ')
-        image = image_batch['image']
-        label = image_batch['label']
+        x,y,z = image_batch['x'],image_batch['y'],image_batch['z']
+        bbox = image_batch['bbox']
+        bbox_x, bbox_y, bbox_z = box_ops.box_xyxy_to_cxcywh(bbox[:,:,(1,2,4,5)]/128), box_ops.box_xyxy_to_cxcywh(bbox[:,:,(0,2,3,5)]/128), box_ops.box_xyxy_to_cxcywh(bbox[:,:,(0,1,3,4)]/128)
+        image = torch.cat((x, y, z), dim=1)
+        label = torch.cat((bbox_x,bbox_y,bbox_z), dim=1)
         
         model_start = datetime.now()
         seg_logits = model(image)
+        #print(seg_logits)
         model_end = datetime.now()
         mean_model_time += (model_end - model_start)
         
-        label = [{'labels': torch.tensor([0], device='cuda:0'), 'boxes': b} for b in label]
+        label = [{'labels': torch.tensor([0,1,2], device='cuda:0'), 'boxes': b} for b in label]
         seg_loss, metric = zip(*[loss_list[loss_name](seg_logits, label) for loss_name in loss_list])
+        
         seg_loss, metric = seg_loss[0].sum(), metric[0]
         
         seg_logits = pp(seg_logits, torch.tensor([image.shape[2], image.shape[3]],device='cuda').unsqueeze(0))[0]
+        # print(seg_logits)
+        # exit(0)
         _, max_indices = torch.max(seg_logits['scores'], dim=0)
         seg_logits = seg_logits['boxes'][max_indices]
 
@@ -181,53 +196,68 @@ def det_gen_one_epoch(model, path, gen_loader, post_transform , ext , accelerato
     progress_bar = tqdm(range(len(gen_loader)), leave=False)
     for i, image_batch in enumerate(gen_loader):
         progress_bar.set_description(f'Generation ')
-        image = image_batch['image'] # b, c, w, h, d
+        x,y,z = image_batch['x'],image_batch['y'],image_batch['z']
+        image = torch.cat((x, y, z), dim=1) # b, c, w, h, d
         min_val, max_val = image.min().item(), image.max().item()
 
-        image_meta = image_batch['image_meta_dict']
-        label = image_batch['label'] 
-
+        #image_meta = image_batch['image_meta_dict']
+        label = [image_batch['bbox'][:,:,(1,2,4,5)],image_batch['bbox'][:,:,(0,2,3,5)],image_batch['bbox'][:,:,(0,1,3,4)]]
+        #bbox_x, bbox_y, bbox_z = box_ops.box_xyxy_to_cxcywh(bbox[:,:,(1,2,4,5)]/128), box_ops.box_xyxy_to_cxcywh(bbox[:,:,(0,2,3,5)]/128), box_ops.box_xyxy_to_cxcywh(bbox[:,:,(0,1,3,4)]/128)
         seg_logits = model(image)
-        
+        #print(seg_logits)
         sp = torch.tensor([image.shape[2], image.shape[3]],device='cuda').unsqueeze(0)
         seg_logits = pp(seg_logits, sp)[0]
+        #print(seg_logits)
         _, max_indices = torch.max(seg_logits['scores'], dim=0)
-        seg_logits = seg_logits['boxes']
+        seg_logits = seg_logits['boxes'][max_indices]
         #print(seg_logits)
         #logger.info(seg_logits)
         
-        image = torch.where(image != 0, image - min_val, image)
-        norm_image = (image/(max_val-min_val)*255).clamp(0,255).byte()
-        image_np = T.ToPILImage()(norm_image[0][0].squeeze()) # 1,3,128,128
-        image_np = Image.merge("RGB",(image_np,image_np,image_np))
-        #x1, y1, x2, y2 = torch.clamp(bbox_tensor, min=0, max=torch.tensor([width - 1, height - 1, width - 1, height - 1]))
         
-        #gen_processed  label과 image합성
-        gen_processed = image_np.copy()
-        draw_gen = ImageDraw.Draw(gen_processed)
-        for idx, bbox in enumerate(seg_logits):
-            if idx == max_indices:
-                draw_gen.rectangle(bbox.squeeze().tolist(), outline='red',width=3)
-        gen_processed = np.transpose(np.array(gen_processed),(2,0,1))
-        #gt_processed   seg_logits와 image 합성
         
-        gt_processed = image_np.copy()
-        draw_gt = ImageDraw.Draw(gt_processed)
-        for bbox in label:
-            draw_gt.rectangle(bbox.squeeze().tolist(), outline='blue',width=3)
-        gt_processed = np.transpose(np.array(gt_processed), (2,0,1))
-        
-        gen_tr(#빨간색 bbox
-            gen_processed,
-            meta_data=image_meta,
-        )
-        gt_tr(#파란색 bbox
-            gt_processed,
-            meta_data=image_meta,
-        )
+        # image = torch.where(image != 0, image - min_val, image)
+        # norm_image = (image/(max_val-min_val)*255).clamp(0,255).byte()
+        for i in range(3):
+            print(seg_logits.shape)
+            bbox = seg_logits[i].squeeze().tolist()
+            gt_bbox = label[i].squeeze().tolist()
+            print(bbox)
+            print(gt_bbox)
+            
+            if i == 0:
+                image_meta = image_batch['x_meta_dict']
+            elif i == 1:
+                image_meta = image_batch['y_meta_dict']
+            else:
+                image_meta = image_batch['z_meta_dict']
+                
+            image_np = T.ToPILImage()(image[0][i].squeeze())
+            image_np = Image.merge("RGB",(image_np,image_np,image_np))
+            #x1, y1, x2, y2 = torch.clamp(bbox_tensor, min=0, max=torch.tensor([width - 1, height - 1, width - 1, height - 1]))
+            
+            #gen_processed  label과 image합성
+            gen_processed = image_np.copy()
+            draw_gen = ImageDraw.Draw(gen_processed)
+            draw_gen.rectangle(bbox, outline='red',width=3)
+            gen_processed = np.transpose(np.array(gen_processed),(2,0,1))
+            #gt_processed   seg_logits와 image 합성
+            
+            gt_processed = image_np.copy()
+            draw_gt = ImageDraw.Draw(gt_processed)
+            draw_gt.rectangle(gt_bbox, outline='blue',width=3)
+            gt_processed = np.transpose(np.array(gt_processed), (2,0,1))
+            
+            gen_tr(#빨간색 bbox
+                gen_processed,
+                meta_data=image_meta,
+            )
+            gt_tr(#파란색 bbox
+                gt_processed,
+                meta_data=image_meta,
+            )
 
-        progress_bar.set_postfix(GPUMemory = torch.cuda.memory_allocated() / (1024 ** 2) )
-        progress_bar.update(1)
+            progress_bar.set_postfix(GPUMemory = torch.cuda.memory_allocated() / (1024 ** 2) )
+            progress_bar.update(1)
 
     progress_bar.clear()
     logger.info(progress_bar)

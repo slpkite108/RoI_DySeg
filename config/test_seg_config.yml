@@ -7,13 +7,12 @@ inference:
   epoch: best
   weight_path: train
 run:
-  checkpoint: Test_ROI_DySeg_lab[1]_[64]_lr[0.002]_diff
+  description: default
+  checkpoint: leng_train
   device_num: '0'
   loader:
     batch_size: 4
     dataset:
-      bbox_scale: null
-      label_scale: null
       name: amos22
       root: /home/work/.dataset/Amos22_RAS/
       scale: 64
@@ -24,11 +23,12 @@ run:
     drop_last: true
     num_workers: 4
     pin_memory: true
-    target_labels: [1]
+    target_labels: [4]
   model:
     args:
-      blocks: [1, 2, 2, 2]
+      blocks: [1, 2, 3, 2]
       channels: [24, 48, 60]
+      conv_r: [4, 2, 2, 2]
       dropout: 0.3
       embed_dim: 96
       embedding_dim: 8
@@ -36,10 +36,9 @@ run:
       in_channels: 1
       out_channels: 1
       r: [4, 2, 2, 1]
-      conv_r: [4, 4, 4, 4]
-    name: ROI_DySeg
+    name: ROI_DySeg 
     type: seg
-    mem_manage: [0.017,0.02]
+    #mem_manage: [0.017,0.02]
   work_dir: /home/work/jayeon/result/roi_dyseg/
 train:
   loss:
@@ -50,6 +49,11 @@ train:
       to_onehot_y: false
     FocalLoss:
       to_onehot_y: false
+    # HausdorffDTLoss:
+    #   include_background: true
+    #   to_onehot_y: false
+    #   sigmoid: true
+
   metrics:
     DiceMetric:
       get_not_nans: false
@@ -72,5 +76,5 @@ train:
   resume: null
   save_cycle: 200
   scheduler:
-    max_epochs: 1000
+    max_epochs: 6000
     warmup_epochs: 5

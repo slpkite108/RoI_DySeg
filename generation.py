@@ -8,7 +8,8 @@ from monai import transforms
 
 from src import utils, loader
 from src.one_epochs import gen_one_epoch
-from src.det_one_epochs import det_gen_one_epoch
+# from src.det_one_epochs import det_gen_one_epoch
+from src.det_one_merged import det_gen_one_epoch
 from src.model import getModel
 
 
@@ -29,7 +30,7 @@ def generation(configs):
     with utils.Profiler(configs.run.device_num, current_pid, interval=0.1) as profiler:
         
     #region setup model
-        model = getModel(configs.run.model.name, **configs.run.model.args)
+        model = getModel(configs.run.model.name, configs.run.model.args)
         model = utils.load_pretrain_model(os.path.join(configs.run.work_dir, configs.run.checkpoint, configs.inference.weight_path, 'model_store', configs.inference.epoch, 'pytorch_model.bin'), model, accelerator)
     #endregion
     #region Prepare Parameters
@@ -40,7 +41,7 @@ def generation(configs):
             ]
         )
         
-        gen_loader = loader.get_loader(configs, mode='generation')
+        gen_loader = loader.get_loader(configs,type=configs.run.model.type, mode='generation')
         
         model, gen_loader = accelerator.prepare(
             model, gen_loader

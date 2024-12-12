@@ -95,6 +95,7 @@ def val_one_epoch(model, val_loader, loss_list, metric_list, post_transform, epo
             metric_list[metric_name](y_pred=seg_logits, y=label)
 
         progress_bar.set_postfix(ValSegLoss = seg_loss.item())
+        step += 1
         progress_bar.update(1)
         
     progress_bar.clear()

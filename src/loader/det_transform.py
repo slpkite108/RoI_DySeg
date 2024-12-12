@@ -67,21 +67,23 @@ def det_transform(configs, mode):
 
     if mode == 'train':
         transform = transforms.Compose([
-            transforms.LoadImaged(keys=["image"], ensure_channel_first=True, image_only=False),
+            transforms.LoadImaged(keys=["x", "y", "z"], ensure_channel_first=True, image_only=False),
             # Ensure 'slice' has channel first
             # Normalize 'slice'
-            transforms.NormalizeIntensityd(keys=["image"], nonzero=True, channel_wise=True),
-
-            transforms.RepeatChanneld(keys=["image"], repeats=3),  # 채널을 3개로 복제 (1, D, H, W -> 3, D, H, W)
+            transforms.NormalizeIntensityd(keys=["x", "y", "z"], nonzero=True, channel_wise=True),
+            transforms.RandAdjustContrastd(keys=["x", "y", "z"], prob=0.5, gamma=(0.7, 1.5)),
+            transforms.RandGaussianNoised(keys=["x", "y", "z"], prob=0.3, mean=0.0, std=0.05),
+            transforms.RandGaussianSmoothd(keys=["x", "y", "z"], prob=0.3, sigma_x=(0.5,1.5), sigma_y=(0.5,1.5), sigma_z=(0.5,1.5)),
+            #transforms.RepeatChanneld(keys=["x", "y", "z"], repeats=3),  # 채널을 3개로 복제 (1, D, H, W -> 3, D, H, W)
         ])
     else:
         transform = transforms.Compose([
-            transforms.LoadImaged(keys=["image"], ensure_channel_first=True, image_only=False),
+            transforms.LoadImaged(keys=["x", "y", "z"], ensure_channel_first=True, image_only=False),
             # Ensure 'slice' has channel first
             # Normalize 'slice'
 
-            transforms.NormalizeIntensityd(keys=["image"], nonzero=True, channel_wise=True),
-            transforms.RepeatChanneld(keys=["image"], repeats=3),  # 채널을 3개로 복제 (1, D, H, W -> 3, D, H, W)
+            transforms.NormalizeIntensityd(keys=["x", "y", "z"], nonzero=True, channel_wise=True),
+            #transforms.RepeatChanneld(keys=["x", "y", "z"], repeats=3),  # 채널을 3개로 복제 (1, D, H, W -> 3, D, H, W)
         ])
 
     return transform

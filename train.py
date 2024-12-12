@@ -9,9 +9,11 @@ from monai import losses, metrics, transforms
 
 from src import utils, loader
 from src.one_epochs import train_one_epoch, val_one_epoch
-from src.det_one_epochs import det_train_one_epoch, det_val_one_epoch
+#from src.det_one_epochs import det_train_one_epoch, det_val_one_epoch
+from src.det_one_merged import det_train_one_epoch, det_val_one_epoch
+
 from src.model import getModel
-from src.losses.DETR_Criterion import DETR_Criterion
+from src.losses import LossCaller
 from src.optimizer import LinearWarmupCosineAnnealingLR
 
 
@@ -42,9 +44,12 @@ def train(configs):
             "mean_acc":0
         })
     #endregion
-        
+        #export LD_LIBRARY_PATH=
     #region setup model
-        model = getModel(configs.run.model.name, **configs.run.model.args)
+        model = getModel(configs.run.model.name, configs.run.model.args)
+        if os.path.exists(os.path.join(configs.run.work_dir, configs.run.checkpoint, configs.inference.weight_path, 'model_store')):
+            if input("There is already training file. will you continue from best epoch? :y , n\n") in ['y', 'Y', 'yes']:
+                model = utils.load_pretrain_model(os.path.join(configs.run.work_dir, configs.run.checkpoint, configs.inference.weight_path, 'model_store', configs.inference.epoch, 'pytorch_model.bin'), model, accelerator, force_load=False)
     #endregion
         
     #region Prepare Parameters
@@ -57,15 +62,20 @@ def train(configs):
                     **configs.train.scheduler
                 )
         
-        if configs.run.model.type in ['seg']:
-            loss_list = {
-                "DiceLoss": losses.DiceLoss(**configs.train.loss.DiceLoss),
-                "FocalLoss": losses.FocalLoss(**configs.train.loss.FocalLoss),
-            }
-        else:
-            loss_list = {
-                "DETR_Criterion": DETR_Criterion(**configs.train.loss.DETR_Criterion)
-            }
+        loss_list = {}
+        for key, val in configs.train.loss.items():
+            loss_list.update({
+                key:LossCaller(key, val)
+            })
+        # if configs.run.model.type in ['seg']:
+        #     loss_list = {
+        #         "DiceLoss": losses.DiceLoss(**configs.train.loss.DiceLoss),
+        #         "FocalLoss": losses.FocalLoss(**configs.train.loss.FocalLoss),
+        #     }
+        # else:
+        #     loss_list = {
+        #         "DETR_Criterion": DETR_Criterion(**configs.train.loss.DETR_Criterion)
+        #     }
         
         metric_list = {
             'DiceMetric': metrics.DiceMetric(**configs.train.metrics.DiceMetric),
@@ -80,8 +90,8 @@ def train(configs):
         
         post_transform = transforms.Compose(post_transform)
 
-        train_loader = loader.get_loader(configs, mode='train')
-        val_loader = loader.get_loader(configs, mode='validation')
+        train_loader = loader.get_loader(configs,type=configs.run.model.type, batch_size=configs.run.loader.batch_size, mode='train')
+        val_loader = loader.get_loader(configs,type=configs.run.model.type, mode='validation')
         
         model, optimizer, scheduler, train_loader, val_loader = accelerator.prepare(
             model, optimizer, scheduler, train_loader, val_loader

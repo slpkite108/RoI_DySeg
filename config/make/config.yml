@@ -1,5 +1,5 @@
 run:
-  yml_path: default.yml
+  yml_path: Second_Roi_DySeg.yml #default.yml
 
 train:
   yml_path: default.yml

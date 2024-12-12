@@ -8,43 +8,96 @@ from tqdm import tqdm
 from cucim.skimage.transform import resize
 import json
 
-
+#def save_mean_slices(image_list, target):
 def save_center_slices(image_list, target):
+    os.makedirs(target, exist_ok=True)
+    
     with tqdm(image_list) as pbar:
         for file_path in pbar:
             # 이미지 로드 (NumPy 배열로 변환)
             img = nib.load(file_path)
-            np_image = np.array(img.dataobj)
+            np_image = np.array(img.dataobj, dtype=np.float32)
             
-            # intensity scaling (0-255로 조정)
+            # 먼저 볼륨 전체를 0-255로 스케일링
             np_image = np_image - np_image.min()  # 최소값을 0으로 맞추기
-            np_image = (np_image / np_image.max() * 255).astype(np.uint8)  # 최대값을 255로 맞추기
+            if np_image.max() > 0:
+                np_image = (np_image / np_image.max()) * 255.0
+            else:
+                # 이미지가 전부 같은 값이라면 그냥 0으로 채워진 볼륨일 가능성 있음.
+                # 이 경우 그대로 두거나 특정 값으로 세팅 가능. 여기서는 그냥 0으로 둠.
+                pass
             
-            # 슬라이스 위치 계산
-            x_center = np_image.shape[0] // 2
-            y_center = np_image.shape[1] // 2
-            z_center = np_image.shape[2] // 2
-
-            # 슬라이스 저장 경로 설정
-            os.makedirs(target, exist_ok=True)
+            # 각 축에 대해 평균 슬라이스 계산
+            # x 축 평균: 모든 x 방향에 대해 평균, 결과 shape: (Y, Z)
+            x_mean_slice = np.mean(np_image, axis=0)
+            # y 축 평균: 모든 y 방향에 대해 평균, 결과 shape: (X, Z)
+            y_mean_slice = np.mean(np_image, axis=1)
+            # z 축 평균: 모든 z 방향에 대해 평균, 결과 shape: (X, Y)
+            z_mean_slice = np.mean(np_image, axis=2)
+            
+            # 각 평균 슬라이스에 대해 다시 0-255 스케일링(정규화)
+            # x_mean_slice는 (Y, Z) 형태
+            x_mean_slice = x_mean_slice - x_mean_slice.min()
+            if x_mean_slice.max() > 0:
+                x_mean_slice = (x_mean_slice / x_mean_slice.max()) * 255
+            x_mean_slice = x_mean_slice.astype(np.uint8)
+            
+            # y_mean_slice는 (X, Z) 형태
+            y_mean_slice = y_mean_slice - y_mean_slice.min()
+            if y_mean_slice.max() > 0:
+                y_mean_slice = (y_mean_slice / y_mean_slice.max()) * 255
+            y_mean_slice = y_mean_slice.astype(np.uint8)
+            
+            # z_mean_slice는 (X, Y) 형태
+            z_mean_slice = z_mean_slice - z_mean_slice.min()
+            if z_mean_slice.max() > 0:
+                z_mean_slice = (z_mean_slice / z_mean_slice.max()) * 255
+            z_mean_slice = z_mean_slice.astype(np.uint8)
             
             # 파일 이름 설정
             base_name = os.path.basename(file_path).replace('.nii.gz', '')
+            
+            # 이미지 저장
+            Image.fromarray(x_mean_slice).save(os.path.join(target, f"{base_name}_x.png"))
+            Image.fromarray(y_mean_slice).save(os.path.join(target, f"{base_name}_y.png"))
+            Image.fromarray(z_mean_slice).save(os.path.join(target, f"{base_name}_z.png"))
+            
+# def save_center_slices(image_list, target):
+#     with tqdm(image_list) as pbar:
+#         for file_path in pbar:
+#             # 이미지 로드 (NumPy 배열로 변환)
+#             img = nib.load(file_path)
+#             np_image = np.array(img.dataobj)
+            
+#             # intensity scaling (0-255로 조정)
+#             np_image = np_image - np_image.min()  # 최소값을 0으로 맞추기
+#             np_image = (np_image / np_image.max() * 255).astype(np.uint8)  # 최대값을 255로 맞추기
+            
+#             # 슬라이스 위치 계산
+#             x_center = np_image.shape[0] // 2
+#             y_center = np_image.shape[1] // 2
+#             z_center = np_image.shape[2] // 2
 
-            # x 축 중앙 슬라이스 저장
-            x_slice = np_image[x_center, :, :]
-            x_slice_img = Image.fromarray(x_slice)
-            x_slice_img.save(os.path.join(target, f"{base_name}_x.png"))
+#             # 슬라이스 저장 경로 설정
+#             os.makedirs(target, exist_ok=True)
+            
+#             # 파일 이름 설정
+#             base_name = os.path.basename(file_path).replace('.nii.gz', '')
 
-            # y 축 중앙 슬라이스 저장
-            y_slice = np_image[:, y_center, :]
-            y_slice_img = Image.fromarray(y_slice)
-            y_slice_img.save(os.path.join(target, f"{base_name}_y.png"))
+            # # x 축 중앙 슬라이스 저장
+            # x_slice = np_image[x_center, :, :]
+            # x_slice_img = Image.fromarray(x_slice)
+            # x_slice_img.save(os.path.join(target, f"{base_name}_x.png"))
 
-            # z 축 중앙 슬라이스 저장
-            z_slice = np_image[:, :, z_center]
-            z_slice_img = Image.fromarray(z_slice)
-            z_slice_img.save(os.path.join(target, f"{base_name}_z.png"))
+            # # y 축 중앙 슬라이스 저장
+            # y_slice = np_image[:, y_center, :]
+            # y_slice_img = Image.fromarray(y_slice)
+            # y_slice_img.save(os.path.join(target, f"{base_name}_y.png"))
+
+            # # z 축 중앙 슬라이스 저장
+            # z_slice = np_image[:, :, z_center]
+            # z_slice_img = Image.fromarray(z_slice)
+            # z_slice_img.save(os.path.join(target, f"{base_name}_z.png"))
 
 def calculate_bounding_box(volume, labelmap):
     bboxList = []

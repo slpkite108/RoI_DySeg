@@ -6,8 +6,8 @@ def register_model(name):
         return func
     return decorator
 
-def getModel(name, *args, **kwargs):
+def getModel(name, args):
     if name in registry:
-        return registry[name](*args, **kwargs)
+        return registry[name](**args)
     else:
         raise ValueError(f"Function '{name}' is not registered.")
