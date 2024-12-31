@@ -36,20 +36,23 @@ def inference(configs):
         if configs.run.model.type in ['comb']:
             detecter = getModel(configs.run.model.detecter.name, configs.run.model.detecter.args)
             detecter = utils.load_pretrain_model(os.path.join(configs.run.work_dir, configs.run.det_check, configs.inference.weight_path, 'model_store', configs.inference.epoch, 'pytorch_model.bin'), detecter, accelerator).to('cuda')
-            flops = FlopCountAnalysis(detecter, torch.randn((1,3,128,128)).to('cuda'))
-            print(flops.total())
+            # flops = FlopCountAnalysis(detecter, torch.randn((1,3,128,128)).to('cuda'))
+            # print(flops.total())
             # macs, params = get_model_complexity_info(detecter, (3,128,128),as_strings=False,verbose=False)
             # print(macs)
             # print(params)
             
             segmenter = getModel(configs.run.model.segmenter.name, configs.run.model.segmenter.args)
-            segmenter = utils.load_pretrain_model(os.path.join(configs.run.work_dir, configs.run.seg_check, configs.inference.weight_path, 'model_store', configs.inference.epoch, 'pytorch_model.bin'), segmenter, accelerator).to('cuda')
-            flops = FlopCountAnalysis(segmenter, torch.randn((1,1,64,64,64)).to('cuda'))
-            print(flops.total())
+            if os.path.exists(os.path.join(configs.run.work_dir, configs.run.checkpoint, configs.inference.weight_path, 'model_store', configs.inference.epoch, 'pytorch_model_1.bin')) and configs.run.finetune:
+                segmenter = utils.load_pretrain_model(os.path.join(configs.run.work_dir, configs.run.checkpoint, configs.inference.weight_path, 'model_store', configs.inference.epoch, 'pytorch_model_1.bin'), segmenter, accelerator).to('cuda')
+            else:
+                segmenter = utils.load_pretrain_model(os.path.join(configs.run.work_dir, configs.run.seg_check, configs.inference.weight_path, 'model_store', configs.inference.epoch, 'pytorch_model.bin'), segmenter, accelerator).to('cuda')
+            # flops = FlopCountAnalysis(segmenter, torch.randn((1,1,64,64,64)).to('cuda'))
+            # print(flops.total())
             # macs, params = get_model_complexity_info(segmenter, (1,32,32,32),as_strings=False,verbose=False)
             # print(macs)
             # print(params)
-            exit(0)
+            #exit(0)
             
         else:
             model = getModel(configs.run.model.name, configs.run.model.args)
@@ -84,6 +87,9 @@ def inference(configs):
             "MeanIoU": metrics.MeanIoU(**configs.train.metrics.MeanIoU),
             'HausdorffDistanceMetric': metrics.HausdorffDistanceMetric(**configs.train.metrics.HausdorffDistanceMetric),
         }
+        
+        # print(metric_list['DiceMetric'].__dict__)
+        # exit(0)
         
         post_transform = transforms.Compose(
             [

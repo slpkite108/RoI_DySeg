@@ -7,14 +7,15 @@ inference:
   epoch: best
   weight_path: train
 run:
-  checkpoint: test_comb_lab1_32
-  det_check: test_lab1
-  seg_check: Second_ROI_DySeg_lab[1]_[32]_lr[0.002]
-  device_num: "0"
+  checkpoint: Second_Comb_Train_det_0.0000005_seg64_lab6_flr0.002_b32
+  det_check: "/home/work/Result/roi_dyseg/test_SPDETR_lab6_b32_0.00005_pruning"
+  seg_check: Second_ROI_DySeg_lab[6]_[64]_lr[0.002]
+  finetune: true
+  device_num: "1"
   loader:
     target_labels:
-      - 1
-    batch_size: 4
+      - 6
+    batch_size: 32
     drop_last: true
     num_workers: 4
     pin_memory: true
@@ -22,7 +23,7 @@ run:
     dataset:
       name: amos22
       root: /home/work/.dataset/Amos22_RAS/
-      scale: 32
+      scale: 64
       image_scale: 128
       label_scale: 128
       slice_scale: 128
@@ -31,11 +32,11 @@ run:
     detecter:
       args:
         args:
-          backbone_name: resnet50
-          dilation: True
+          backbone_name: resnet34
+          dilation: False
           position_embedding: sine    #sine, learned
-          enc_layers: 6
-          dec_layers: 6
+          enc_layers: 4
+          dec_layers: 4
           dim_feedforward: 2048
           hidden_dim: 256
           dropout: 0.1
@@ -46,7 +47,7 @@ run:
           num_classes: 1
           lr_backbone: 0.00001
           masks: False
-      name: DETR
+      name: SPDETR_pruning
       type: det
     segmenter:
       args:
@@ -64,11 +65,12 @@ run:
       type: seg 
     type: comb #det, seg, comb
     name: comb
-  work_dir: /home/work/jayeon/result/roi_dyseg/
+  work_dir: /home/work/Result/roi_dyseg/
 train:
   loss:
     detecter:
       DETR_Criterion:
+        num_classes: 1
         matcher:
           cost_class: 1
           cost_bbox: 5
@@ -79,6 +81,7 @@ train:
           loss_giou: 2
         eos_coef: 0.1
         losses: [labels, boxes, cardinality]
+        nf_penalty: False
     segmenter:
       DiceLoss:
         sigmoid: true
@@ -90,23 +93,24 @@ train:
 
   metrics:
     DiceMetric:
-      include_background: true
-      reduction: mean_batch
+      include_background: false #true
+      reduction: mean #_batch
       get_not_nans: false
+      num_classes: 1
     HausdorffDistanceMetric:
       percentile: 95
       include_background: true
-      reduction: mean_batch
+      reduction: mean #_batch
       get_not_nans: false
     MeanIoU:
       include_background: true
-      reduction: mean_batch
+      reduction: mean #_batch
       get_not_nans: false
   optimizer:
     betas:
     - 0.9
     - 0.95
-    lr: 0.00005 #0.002 #0.0025
+    lr: 0.002 #0.0000005 #0.002 #0.0025
     opt: adamw
     weight_decay: 0.05
   resume: null

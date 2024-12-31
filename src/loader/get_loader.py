@@ -20,7 +20,7 @@ def get_loader(configs, mode='train', type = 'seg', batch_size = 4, shuffle = Tr
     shuffle = shuffle if mode in ['train', 'validation'] else False
     drop_last = drop_last if not mode in ['generation'] else False
 
-    if mode in ['inference','generation']:
+    if mode in ['generation']:
         dataset = Dataset(
             data=subjects,
             transform=transform,

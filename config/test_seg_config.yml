@@ -76,5 +76,5 @@ train:
   resume: null
   save_cycle: 200
   scheduler:
-    max_epochs: 6000
+    max_epochs: 1000
     warmup_epochs: 5

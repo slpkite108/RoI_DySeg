@@ -7,7 +7,7 @@ inference:
   epoch: best
   weight_path: train
 run:
-  checkpoint: Second_Det_lab[1]_[128]_lr[0.00005]_b128
+  checkpoint: Second_Det_lab[1]_[128]_lr[0.0000025]_b128
   device_num: "0"
   loader:
     target_labels:
@@ -80,11 +80,11 @@ train:
     betas:
     - 0.9
     - 0.95
-    lr: 0.00005 #0.002 #0.0025
+    lr: 0.0000025 #0.002 #0.0025
     opt: adamw
     weight_decay: 0.05
   resume: null
   save_cycle: 200
   scheduler:
-    max_epochs: 1000
+    max_epochs: 2000
     warmup_epochs: 5
